@@ -13,6 +13,7 @@ import (
 const (
 	cmdAuth   = 0xf0f0
 	cmdStatus = 0x0b4a
+	cmdArm    = 0x401e
 )
 
 var statuses = map[byte]string{
@@ -89,6 +90,12 @@ func main() {
 		versionStr(resp[1:4]),
 		"status",
 		statuses[resp[20]>>5&0x03],
+		"zones-firing",
+		resp[20]&0x8 > 0,
+		"all-zones-closed",
+		resp[20]&0x4 > 0,
+		"siren",
+		resp[20]&0x2 > 0,
 	)
 
 	for i := 0; i < 17; i++ {
@@ -100,6 +107,18 @@ func main() {
 		armed := resp[21+i]&0x01 > 0
 		disparo := resp[21+i]&0x08 > 0
 		log.Info("partition", "number", i, "armed", armed, "firing", disparo)
+	}
+
+	log.Info("disarming")
+	payload = createPayload(cmdArm, []byte{0xff, 0x00})
+	if _, err := conn.Write(payload); err != nil {
+		panic(err)
+	}
+
+	log.Info("arming partition 2")
+	payload = createPayload(cmdArm, []byte{0x02, 0x01})
+	if _, err := conn.Write(payload); err != nil {
+		panic(err)
 	}
 }
 
@@ -192,6 +211,6 @@ func checksum(pacote []byte) byte {
 	return check
 }
 
-func versionStr(buf []byte) string {
-	return fmt.Sprintf("%x", buf)
+func versionStr(b []byte) string {
+	return fmt.Sprintf("%d.%d.%d", int(b[0]), int(b[1]), int(b[2]))
 }
