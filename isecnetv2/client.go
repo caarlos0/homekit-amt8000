@@ -27,9 +27,9 @@ const (
 type State byte
 
 const (
-	Disarmed State = 0x00
-	Partial  State = 0x01
-	Armed    State = 0x03
+	StateDisarmed State = 0x00
+	StatePartial  State = 0x01
+	StateArmed    State = 0x03
 )
 
 const (
@@ -40,11 +40,11 @@ const (
 
 func (s State) String() string {
 	switch s {
-	case Disarmed:
-		return "Unarmed"
-	case Partial:
+	case StateDisarmed:
+		return "Disarmed"
+	case StatePartial:
 		return "Partial"
-	case Armed:
+	case StateArmed:
 		return "Armed"
 	default:
 		return "Unknown"
@@ -72,7 +72,7 @@ func (c *Client) TurnOffSiren(partition byte) error {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdTurnOffSiren, []byte{partition})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not turn siren off %v: %w", partition, err)
+		return fmt.Errorf("could not turn siren off %v: %w", partition, c.handleWriteError(err))
 	}
 	return c.recycle()
 }
@@ -83,7 +83,7 @@ func (c *Client) CleanFirings() error {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdCleanFiring, nil)
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not clean firing: %w", err)
+		return fmt.Errorf("could not clean firing: %w", c.handleWriteError(err))
 	}
 	return c.recycle()
 }
@@ -94,15 +94,7 @@ func (c *Client) Status() (OverallStatus, error) {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdStatus, nil)
 	if _, err := c.conn.Write(payload); err != nil {
-		if errors.Is(err, syscall.EPIPE) {
-			if err := c.recycle(); err != nil {
-				return OverallStatus{}, fmt.Errorf(
-					"client is broken, and we failed to recycle it: %w",
-					err,
-				)
-			}
-		}
-		return OverallStatus{}, fmt.Errorf("could not gather status: %w", err)
+		return OverallStatus{}, fmt.Errorf("could not gather status: %w", c.handleWriteError(err))
 	}
 
 	resp, err := io.ReadAll(io.LimitReader(c.conn, int64(len(payload))))
@@ -132,13 +124,13 @@ func modelName(b byte) string {
 	}
 }
 
-func (c *Client) Disable(partition byte) error {
+func (c *Client) Disarm(partition byte) error {
 	log.Debug("disarm", "partition", partition)
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdDisarm})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not disarm: %w", err)
+		return fmt.Errorf("could not disarm: %w", c.handleWriteError(err))
 	}
 	return c.recycle()
 }
@@ -149,9 +141,24 @@ func (c *Client) Arm(partition byte) error {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdArm})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not arm %v: %w", partition, err)
+		return fmt.Errorf("could not arm %v: %w", partition, c.handleWriteError(err))
 	}
 	return c.recycle()
+}
+
+func (c *Client) handleWriteError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if errors.Is(err, syscall.EPIPE) {
+		if err := c.recycle(); err != nil {
+			return fmt.Errorf(
+				"client is broken, and we failed to recycle it: %w",
+				err,
+			)
+		}
+	}
+	return err
 }
 
 func (c *Client) Close() error {
@@ -181,7 +188,7 @@ func (c *Client) init() error {
 
 	payload := makeAuthPayload(c.pass)
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not auth: %w", err)
+		return fmt.Errorf("could not auth: %w", c.handleWriteError(err))
 	}
 
 	size, err := payloadSize(payload)

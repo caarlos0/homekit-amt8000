@@ -3,7 +3,7 @@ package isecnetv2
 type OverallStatus struct {
 	Model       string
 	Version     string
-	Status      State
+	State       State
 	ZonesFiring bool
 	ZonesClosed bool
 	Siren       bool
@@ -33,7 +33,7 @@ func fromBytes(resp []byte) OverallStatus {
 	status := OverallStatus{
 		Model:       modelName(resp[0]),
 		Version:     version(resp[1:4]),
-		Status:      State(resp[20] >> 5 & 0x03),
+		State:       State(resp[20] >> 5 & 0x03),
 		ZonesFiring: resp[20]&0x8 > 0,
 		ZonesClosed: resp[20]&0x4 > 0,
 		Siren:       resp[20]&0x2 > 0,

@@ -163,8 +163,8 @@ func toCurrentState(cfg Config, status isecnetv2.OverallStatus) int {
 		return characteristic.SecuritySystemCurrentStateAlarmTriggered
 	}
 
-	switch status.Status {
-	case isecnetv2.Partial, isecnetv2.Armed:
+	switch status.State {
+	case isecnetv2.StatePartial, isecnetv2.StateArmed:
 		for _, part := range status.Partitions {
 			log.Debug("partition armed", "part", part.Number, "armed", part.Armed)
 			if !part.Armed {
@@ -274,7 +274,7 @@ func alarmUpdateHandler(cli *isecnetv2.Client, cfg Config) func(v int) {
 			}
 		case characteristic.SecuritySystemTargetStateDisarm:
 			log.Info("disarm")
-			if err := cli.Disable(isecnetv2.AllPartitions); err != nil {
+			if err := cli.Disarm(isecnetv2.AllPartitions); err != nil {
 				log.Error("could not disarm", "err", err)
 			}
 		}
