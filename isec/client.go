@@ -117,7 +117,7 @@ func (c *Client) Status() (OverallStatus, error) {
 
 	for i := 0; i < 17; i++ {
 		// check if partition is disabled
-		if resp[21+i]&0x80 == 0 {
+		if resp[21+i]&0x80 == 1 {
 			continue
 		}
 

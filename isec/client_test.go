@@ -20,4 +20,8 @@ func TestIsec(t *testing.T) {
 			t.Logf("%+v", zone)
 		}
 	}
+
+	for _, part := range status.Partitions {
+		t.Logf("%+v", part)
+	}
 }

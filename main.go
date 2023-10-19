@@ -18,11 +18,14 @@ import (
 )
 
 type Config struct {
-	Host         string `env:"HOST,required"`
-	Port         string `env:"PORT"              envDefault:"9009"`
-	Password     string `env:"PASSWORD,required"`
-	MotionZones  []int  `env:"MOTION"`
-	ContactZones []int  `env:"CONTACT"`
+	Host           string `env:"HOST,required"`
+	Port           string `env:"PORT"              envDefault:"9009"`
+	Password       string `env:"PASSWORD,required"`
+	MotionZones    []int  `env:"MOTION"`
+	ContactZones   []int  `env:"CONTACT"`
+	StayPartition  byte   `env:"STAY"              envDefault:"1"`
+	AwayPartition  byte   `env:"AWAY"              envDefault:"255"`
+	NightPartition byte   `env:"NIGHT"             envDefault:"2"`
 }
 
 func main() {
@@ -46,62 +49,30 @@ func main() {
 		log.Fatal("could not init isecnet2 homebridge", "err", err)
 	}
 
-	// Create the switch accessory.
-	a := accessory.NewSecuritySystem(accessory.Info{
+	log.Info(
+		"partitions configuration:",
+		"stay",
+		cfg.StayPartition,
+		"away",
+		cfg.AwayPartition,
+		"night",
+		cfg.NightPartition,
+	)
+
+	bridge := accessory.New(accessory.Info{
+		Name: "Alarm Bridge",
+	}, accessory.TypeBridge)
+
+	alarm := accessory.NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",
 		SerialNumber: "0xf0f0",
 		Manufacturer: "Intelbras",
 		Model:        status.Model,
 		Firmware:     status.Version,
 	})
-	a.SecuritySystem.SecuritySystemTargetState.OnValueRemoteUpdate(func(v int) {
-		switch v {
-		case characteristic.SecuritySystemTargetStateStayArm:
-			log.Info("arm stay")
-			if err := cli.Arm(isec.AllPartitions); err != nil {
-				log.Error("could not arm", "err", err)
-			}
-		case characteristic.SecuritySystemTargetStateAwayArm:
-			log.Info("arm away")
-			if err := cli.Arm(0x02); err != nil {
-				log.Error("could not arm partition 2", "err", err)
-			}
-		case characteristic.SecuritySystemTargetStateNightArm:
-			log.Info("arm night")
-			if err := cli.Arm(0x02); err != nil {
-				log.Error("could not arm partition 2", "err", err)
-			}
-		case characteristic.SecuritySystemTargetStateDisarm:
-			log.Info("disarm")
-			if err := cli.Disable(isec.AllPartitions); err != nil {
-				log.Error("could not disarm", "err", err)
-			}
-		}
-	})
+	alarm.SecuritySystem.SecuritySystemTargetState.OnValueRemoteUpdate(alarmUpdateHandler(cli, cfg))
 
-	contactZones := make([]*ContactSensor, len(cfg.ContactZones))
-	motionZones := make([]*MotionSensor, len(cfg.MotionZones))
-
-	for i, zone := range cfg.ContactZones {
-		sensor := newContactSensor(accessory.Info{
-			Name:         fmt.Sprintf("Zone %d", zone),
-			Manufacturer: "Intelbras",
-		})
-		if status.Zones[zone-1].Open {
-			sensor.ContactSensor.ContactSensorState.SetValue(1)
-		}
-		contactZones[i] = sensor
-	}
-	for i, zone := range cfg.MotionZones {
-		sensor := newMotionSensor(accessory.Info{
-			Name:         fmt.Sprintf("Zone %d", zone),
-			Manufacturer: "Intelbras",
-		})
-		if status.Zones[zone-1].Open {
-			sensor.MotionSensor.MotionDetected.SetValue(true)
-		}
-		motionZones[i] = sensor
-	}
+	contactZones, motionZones := setupZones(cfg, status)
 
 	go func() {
 		var once sync.Once
@@ -115,16 +86,19 @@ func main() {
 				log.Error("could not get status", "err", err)
 				continue
 			}
-			a.Info.FirmwareRevision.SetValue(status.Version)
-			a.Info.Model.SetValue(status.Model)
+			alarm.Info.FirmwareRevision.SetValue(status.Version)
+			alarm.Info.Model.SetValue(status.Model)
 			// sets the initial state, otherwise it'll keep in "arming" when server restarts
 			once.Do(func() {
-				state := toCurrentState(status)
-				err := a.SecuritySystem.SecuritySystemTargetState.SetValue(state)
-				log.Info("set target state", "state", state, "err", err)
+				if state := toCurrentState(cfg, status); state >= 0 {
+					err := alarm.SecuritySystem.SecuritySystemTargetState.SetValue(state)
+					log.Info("set target state", "state", state, "err", err)
+				}
 			})
-			if state := toCurrentState(status); a.SecuritySystem.SecuritySystemCurrentState.Value() != state {
-				err := a.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
+
+			if state := toCurrentState(cfg, status); state >= 0 &&
+				alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
+				err := alarm.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
 				log.Info("set current state", "state", state, "err", err)
 			}
 
@@ -132,31 +106,27 @@ func main() {
 				current := boolToInt(status.Zones[zone-1].Open)
 				v := contactZones[i].ContactSensor.ContactSensorState.Value()
 				if v != current {
-					log.Info("contact", "zone", zone, "status", current)
 					contactZones[i].ContactSensor.ContactSensorState.SetValue(current)
+					log.Info("contact", "zone", zone, "status", current)
 				}
 			}
 			for i, zone := range cfg.MotionZones {
 				current := status.Zones[zone-1].Open
 				v := motionZones[i].MotionSensor.MotionDetected.Value()
 				if v != current {
-					log.Info("motion", "zone", zone, "status", current)
 					motionZones[i].MotionSensor.MotionDetected.SetValue(current)
+					log.Info("motion", "zone", zone, "status", current)
 				}
 			}
 
 		}
 	}()
 
-	bridge := accessory.New(accessory.Info{
-		Name: "Bridge",
-	}, accessory.TypeBridge)
-
 	// Store the data in the "./db" directory.
 	fs := hap.NewFsStore("./db")
 
 	// Create the hap server.
-	server, err := hap.NewServer(fs, bridge, allSensors(a, contactZones, motionZones)...)
+	server, err := hap.NewServer(fs, bridge, allSensors(alarm, contactZones, motionZones)...)
 	if err != nil {
 		// stop if an error happens
 		log.Fatal("fail", "error", err)
@@ -182,20 +152,42 @@ func main() {
 	server.ListenAndServe(ctx)
 }
 
-func toCurrentState(status isec.OverallStatus) int {
+func toCurrentState(cfg Config, status isec.OverallStatus) int {
 	if status.Siren {
 		log.Debug("set: firing")
 		return characteristic.SecuritySystemCurrentStateAlarmTriggered
 	}
+
 	switch status.Status {
-	case isec.Armed:
-		log.Debug("set: away arm")
-		return characteristic.SecuritySystemCurrentStateAwayArm
-	case isec.Partial:
-		log.Debug("set: night arm")
-		return characteristic.SecuritySystemCurrentStateNightArm
+	case isec.Partial, isec.Armed:
+		for _, part := range status.Partitions {
+			log.Info("partition armed", "part", part.Number, "armed", part.Armed)
+			if !part.Armed {
+				continue
+			}
+			switch toPartition(part.Number) {
+			case cfg.NightPartition:
+				log.Info("set: away night")
+				return characteristic.SecuritySystemCurrentStateNightArm
+			case cfg.AwayPartition:
+				log.Info("set: away arm")
+				return characteristic.SecuritySystemCurrentStateAwayArm
+			case cfg.StayPartition:
+				log.Info("set: stay arm")
+				return characteristic.SecuritySystemCurrentStateStayArm
+			default:
+				log.Warn(
+					"partition is armed, but its not configured for any state",
+					"partition",
+					part.Number,
+				)
+			}
+		}
+
+		log.Info("set: none")
+		return -1
 	default:
-		log.Debug("set: disarm")
+		log.Info("set: disarm")
 		return characteristic.SecuritySystemCurrentStateDisarmed
 	}
 }
@@ -228,4 +220,65 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+func setupZones(cfg Config, status isec.OverallStatus) ([]*ContactSensor, []*MotionSensor) {
+	contactZones := make([]*ContactSensor, len(cfg.ContactZones))
+	motionZones := make([]*MotionSensor, len(cfg.MotionZones))
+	for i, zone := range cfg.ContactZones {
+		sensor := newContactSensor(accessory.Info{
+			Name:         fmt.Sprintf("Zone %d", zone),
+			Manufacturer: "Intelbras",
+		})
+		if status.Zones[zone-1].Open {
+			sensor.ContactSensor.ContactSensorState.SetValue(1)
+		}
+		contactZones[i] = sensor
+	}
+	for i, zone := range cfg.MotionZones {
+		sensor := newMotionSensor(accessory.Info{
+			Name:         fmt.Sprintf("Zone %d", zone),
+			Manufacturer: "Intelbras",
+		})
+		if status.Zones[zone-1].Open {
+			sensor.MotionSensor.MotionDetected.SetValue(true)
+		}
+		motionZones[i] = sensor
+	}
+
+	return contactZones, motionZones
+}
+
+func alarmUpdateHandler(cli *isec.Client, cfg Config) func(v int) {
+	return func(v int) {
+		switch v {
+		case characteristic.SecuritySystemTargetStateStayArm:
+			log.Info("arm stay")
+			if err := cli.Arm(cfg.StayPartition); err != nil {
+				log.Error("could not arm", "err", err)
+			}
+		case characteristic.SecuritySystemTargetStateAwayArm:
+			log.Info("arm away")
+			if err := cli.Arm(cfg.AwayPartition); err != nil {
+				log.Error("could not arm partition 2", "err", err)
+			}
+		case characteristic.SecuritySystemTargetStateNightArm:
+			log.Info("arm night")
+			if err := cli.Arm(cfg.NightPartition); err != nil {
+				log.Error("could not arm partition 2", "err", err)
+			}
+		case characteristic.SecuritySystemTargetStateDisarm:
+			log.Info("disarm")
+			if err := cli.Disable(isec.AllPartitions); err != nil {
+				log.Error("could not disarm", "err", err)
+			}
+		}
+	}
+}
+
+func toPartition(i int) byte {
+	if i == 0 {
+		return isec.AllPartitions
+	}
+	return byte(i)
 }
