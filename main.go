@@ -65,7 +65,6 @@ func main() {
 
 	alarm := accessory.NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",
-		SerialNumber: "0xf0f0",
 		Manufacturer: "Intelbras",
 		Model:        status.Model,
 		Firmware:     status.Version,
