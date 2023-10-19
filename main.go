@@ -12,8 +12,8 @@ import (
 	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
 	"github.com/brutella/hap/characteristic"
-	"github.com/caarlos0/amt8000-homebridge/isec"
 	"github.com/caarlos0/env/v9"
+	"github.com/caarlos0/homekit-amt8000/isecnetv2"
 	"github.com/charmbracelet/log"
 )
 
@@ -34,7 +34,7 @@ func main() {
 		log.Fatal("could not parse env", "err", err)
 	}
 
-	cli, err := isec.New(cfg.Host, cfg.Port, cfg.Password)
+	cli, err := isecnetv2.New(cfg.Host, cfg.Port, cfg.Password)
 	if err != nil {
 		log.Fatal("could not init isecnet2 client", "err", err)
 	}
@@ -150,14 +150,14 @@ func main() {
 	server.ListenAndServe(ctx)
 }
 
-func toCurrentState(cfg Config, status isec.OverallStatus) int {
+func toCurrentState(cfg Config, status isecnetv2.OverallStatus) int {
 	if status.Siren {
 		log.Debug("set: firing")
 		return characteristic.SecuritySystemCurrentStateAlarmTriggered
 	}
 
 	switch status.Status {
-	case isec.Partial, isec.Armed:
+	case isecnetv2.Partial, isecnetv2.Armed:
 		for _, part := range status.Partitions {
 			log.Debug("partition armed", "part", part.Number, "armed", part.Armed)
 			if !part.Armed {
@@ -220,7 +220,7 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-func setupZones(cfg Config, status isec.OverallStatus) ([]*ContactSensor, []*MotionSensor) {
+func setupZones(cfg Config, status isecnetv2.OverallStatus) ([]*ContactSensor, []*MotionSensor) {
 	contactZones := make([]*ContactSensor, len(cfg.ContactZones))
 	motionZones := make([]*MotionSensor, len(cfg.MotionZones))
 	for i, zone := range cfg.ContactZones {
@@ -247,7 +247,7 @@ func setupZones(cfg Config, status isec.OverallStatus) ([]*ContactSensor, []*Mot
 	return contactZones, motionZones
 }
 
-func alarmUpdateHandler(cli *isec.Client, cfg Config) func(v int) {
+func alarmUpdateHandler(cli *isecnetv2.Client, cfg Config) func(v int) {
 	return func(v int) {
 		switch v {
 		case characteristic.SecuritySystemTargetStateStayArm:
@@ -267,7 +267,7 @@ func alarmUpdateHandler(cli *isec.Client, cfg Config) func(v int) {
 			}
 		case characteristic.SecuritySystemTargetStateDisarm:
 			log.Info("disarm")
-			if err := cli.Disable(isec.AllPartitions); err != nil {
+			if err := cli.Disable(isecnetv2.AllPartitions); err != nil {
 				log.Error("could not disarm", "err", err)
 			}
 		}
@@ -276,7 +276,7 @@ func alarmUpdateHandler(cli *isec.Client, cfg Config) func(v int) {
 
 func toPartition(i int) byte {
 	if i == 0 {
-		return isec.AllPartitions
+		return isecnetv2.AllPartitions
 	}
 	return byte(i)
 }

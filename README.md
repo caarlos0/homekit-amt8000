@@ -1,4 +1,4 @@
-# amt8000-homebridge
+# homekit-amt8000
 
 ## Configuration:
 

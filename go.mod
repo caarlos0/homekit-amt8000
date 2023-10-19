@@ -1,4 +1,4 @@
-module github.com/caarlos0/amt8000-homebridge
+module github.com/caarlos0/homekit-amt8000
 
 go 1.21.1
 

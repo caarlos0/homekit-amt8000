@@ -1,4 +1,4 @@
-package isec
+package isecnetv2
 
 import (
 	"errors"
