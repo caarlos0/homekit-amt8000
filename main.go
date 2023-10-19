@@ -23,9 +23,9 @@ type Config struct {
 	Password       string `env:"PASSWORD,required"`
 	MotionZones    []int  `env:"MOTION"`
 	ContactZones   []int  `env:"CONTACT"`
-	StayPartition  byte   `env:"STAY"              envDefault:"1"`
-	AwayPartition  byte   `env:"AWAY"              envDefault:"255"`
-	NightPartition byte   `env:"NIGHT"             envDefault:"2"`
+	StayPartition  int    `env:"STAY"              envDefault:"1"`
+	AwayPartition  int    `env:"AWAY"              envDefault:"255"`
+	NightPartition int    `env:"NIGHT"             envDefault:"2"`
 }
 
 func main() {
@@ -124,7 +124,11 @@ func main() {
 	fs := hap.NewFsStore("./db")
 
 	// Create the hap server.
-	server, err := hap.NewServer(fs, bridge, allSensors(alarm, contactZones, motionZones)...)
+	server, err := hap.NewServer(
+		fs,
+		bridge.A,
+		securityAccessories(alarm, contactZones, motionZones)...,
+	)
 	if err != nil {
 		// stop if an error happens
 		log.Fatal("fail", "error", err)
@@ -163,9 +167,9 @@ func toCurrentState(cfg Config, status isecnetv2.OverallStatus) int {
 			if !part.Armed {
 				continue
 			}
-			switch toPartition(part.Number) {
+			switch part.Number {
 			case cfg.NightPartition:
-				log.Debug("set: away night")
+				log.Debug("set: night arm")
 				return characteristic.SecuritySystemCurrentStateNightArm
 			case cfg.AwayPartition:
 				log.Debug("set: away arm")
@@ -190,7 +194,7 @@ func toCurrentState(cfg Config, status isecnetv2.OverallStatus) int {
 	}
 }
 
-func allSensors(
+func securityAccessories(
 	alarm *accessory.SecuritySystem,
 	contacts []*ContactSensor,
 	motions []*MotionSensor,
@@ -252,17 +256,17 @@ func alarmUpdateHandler(cli *isecnetv2.Client, cfg Config) func(v int) {
 		switch v {
 		case characteristic.SecuritySystemTargetStateStayArm:
 			log.Info("arm stay")
-			if err := cli.Arm(cfg.StayPartition); err != nil {
+			if err := cli.Arm(toPartition(cfg.StayPartition)); err != nil {
 				log.Error("could not arm", "err", err)
 			}
 		case characteristic.SecuritySystemTargetStateAwayArm:
 			log.Info("arm away")
-			if err := cli.Arm(cfg.AwayPartition); err != nil {
+			if err := cli.Arm(toPartition(cfg.AwayPartition)); err != nil {
 				log.Error("could not arm partition 2", "err", err)
 			}
 		case characteristic.SecuritySystemTargetStateNightArm:
 			log.Info("arm night")
-			if err := cli.Arm(cfg.NightPartition); err != nil {
+			if err := cli.Arm(toPartition(cfg.NightPartition)); err != nil {
 				log.Error("could not arm partition 2", "err", err)
 			}
 		case characteristic.SecuritySystemTargetStateDisarm:
