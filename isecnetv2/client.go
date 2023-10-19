@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/charmbracelet/log"
@@ -93,6 +94,14 @@ func (c *Client) Status() (OverallStatus, error) {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdStatus, nil)
 	if _, err := c.conn.Write(payload); err != nil {
+		if errors.Is(err, syscall.EPIPE) {
+			if err := c.recycle(); err != nil {
+				return OverallStatus{}, fmt.Errorf(
+					"client is broken, and we failed to recycle it: %w",
+					err,
+				)
+			}
+		}
 		return OverallStatus{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
