@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"sync"
@@ -136,22 +138,23 @@ func main() {
 
 	// Setup a listener for interrupts and SIGTERM signals
 	// to stop the server.
-	c := make(chan os.Signal)
+	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	signal.Notify(c, syscall.SIGTERM)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-c
-		// Stop delivering signals.
+		log.Info("stopping server...")
 		signal.Stop(c)
-		// Cancel the context to stop the server.
 		cancel()
 	}()
 
 	// Run the server.
 	log.Info("starting server...")
-	server.ListenAndServe(ctx)
+	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Error("failed to close server", "err", err)
+	}
 }
 
 func toCurrentState(cfg Config, status isecnetv2.OverallStatus) int {
