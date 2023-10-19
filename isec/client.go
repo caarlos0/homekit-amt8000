@@ -102,63 +102,7 @@ func (c *Client) Status() (OverallStatus, error) {
 	}
 
 	_, reply := parseResponse(resp)
-	if len(reply) < 21 {
-		return OverallStatus{}, fmt.Errorf("client needs recycling")
-	}
-	result := OverallStatus{
-		Model:       modelName(reply[0]),
-		Version:     version(reply[1:4]),
-		Status:      State(reply[20] >> 5 & 0x03),
-		ZonesFiring: reply[20]&0x8 > 0,
-		ZonesClosed: reply[20]&0x4 > 0,
-		Siren:       reply[20]&0x2 > 0,
-		Zones:       make([]Zone, 48),
-	}
-
-	for i := 0; i < 17; i++ {
-		// check if partition is disabled
-		if resp[21+i]&0x80 == 1 {
-			continue
-		}
-
-		result.Partitions = append(result.Partitions, Partition{
-			Number: i,
-			Armed:  reply[21+i]&0x01 > 0,
-			Firing: reply[21+i]&0x04 > 0,
-			Fired:  reply[21+i]&0x08 > 0,
-			Stay:   reply[21+i]&0x40 > 0,
-		})
-	}
-
-	for i := 0; i < 48; i++ {
-		result.Zones[i].Number = i + 1
-	}
-
-	for i, octet := range reply[38:46] {
-		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				result.Zones[i+j].Open = true
-			}
-		}
-	}
-
-	for i, octet := range reply[46:54] {
-		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				result.Zones[i+j].Violated = true
-			}
-		}
-	}
-
-	for i, octet := range reply[54:62] {
-		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				result.Zones[i+j].Anulated = true
-			}
-		}
-	}
-
-	return result, nil
+	return fromBytes(reply), nil
 }
 
 func version(b []byte) string {

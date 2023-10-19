@@ -73,16 +73,16 @@ func contactIDEncode(pwd string) ([]byte, error) {
 	return buf, nil
 }
 
-func payloadSize(payload []byte) (int, error) {
+func payloadSize(payload []byte) (int64, error) {
 	if len(payload) < 9 {
 		return 0, fmt.Errorf("wrong payload length: %d", len(payload))
 	}
 	// TODO: this is likely not correct
 	n := mergeOctets(payload[4:6])
 	if len(payload) < n {
-		return 0, fmt.Errorf("wrong merged payload length: %d", n)
+		return 0, fmt.Errorf("wrong merged payload length: %d < %d", len(payload), n)
 	}
-	return n, nil
+	return int64(n), nil
 }
 
 func parseResponse(resp []byte) (int, []byte) {
