@@ -26,7 +26,7 @@ type Config struct {
 	MotionZones    []int  `env:"MOTION"`
 	ContactZones   []int  `env:"CONTACT"`
 	StayPartition  int    `env:"STAY"              envDefault:"1"`
-	AwayPartition  int    `env:"AWAY"              envDefault:"255"`
+	AwayPartition  int    `env:"AWAY"              envDefault:"0"`
 	NightPartition int    `env:"NIGHT"             envDefault:"2"`
 }
 
