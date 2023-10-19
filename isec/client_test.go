@@ -22,6 +22,8 @@ func TestIsec(t *testing.T) {
 	}
 
 	for _, part := range status.Partitions {
-		t.Logf("%+v", part)
+		if part.Stay || part.Armed || part.Fired || part.Firing {
+			t.Logf("%+v", part)
+		}
 	}
 }

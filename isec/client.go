@@ -96,12 +96,17 @@ func (c *Client) Status() (OverallStatus, error) {
 		return OverallStatus{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
-	resp, err := io.ReadAll(io.LimitReader(c.conn, 152))
+	resp, err := io.ReadAll(io.LimitReader(c.conn, int64(len(payload))))
 	if err != nil {
 		return OverallStatus{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
-	_, reply := parseResponse(resp)
+	resp2, err := io.ReadAll(io.LimitReader(c.conn, int64(resp[0])))
+	if err != nil {
+		return OverallStatus{}, fmt.Errorf("could not gather status: %w", err)
+	}
+
+	_, reply := parseResponse(append(resp, resp2...))
 	return fromBytes(reply), nil
 }
 
