@@ -50,13 +50,12 @@ func main() {
 	}
 
 	log.Info(
-		"partitions configuration:",
-		"stay",
-		cfg.StayPartition,
-		"away",
-		cfg.AwayPartition,
-		"night",
-		cfg.NightPartition,
+		"bridge configurations:",
+		"stay_partition", cfg.StayPartition,
+		"away_partition", cfg.AwayPartition,
+		"night_partition", cfg.NightPartition,
+		"motion_sensor_zones", cfg.MotionZones,
+		"contact_sensor_zones", cfg.ContactZones,
 	)
 
 	bridge := accessory.New(accessory.Info{

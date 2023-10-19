@@ -1,15 +1,23 @@
 # amt8000-homebridge
 
+## Configuration:
+
+```sh
+HOST=192.168.207.4     # mandatory
+PASSWORD=123456        # mandatory
+PORT=9009              # default is 9009
+MOTION="1,2,3"         # zones that are motion sensors
+CONTACT="4,5,6"        # zones that are contact sensors (i.e. doors)
+STAY="1"               # partition to arm when set stay mode - default is 1
+NIGHT="2"              # partition to arm when set to night mode - default is 2
+AWAY="255"             # partition to arm when set to away mode - default is 255
+```
+
+## Running
+
 ```bash
-HOST=192.168.207.4 \
-  PASSWORD=123456 \
-  PORT=9009 \ # default
-  MOTION="1,2,3" \ # zones that are motion sensors
-  CONTACT="4,5,6" \ # zones that are contact sensors (i.e. doors)
-  STAY="1" \ # partition to arm when set stay mode - default
-  AWAY="255" \ # partition to arm when set to away mode - default
-  NIGHT="2" \ # partition to arm when set to night mode - default
-  go run .
+source .env
+go run .
 ```
 
 ### Partitions
