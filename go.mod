@@ -6,12 +6,14 @@ require (
 	github.com/brutella/hap v0.0.27
 	github.com/caarlos0/env/v9 v9.0.0
 	github.com/charmbracelet/log v0.2.5
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/brutella/dnssd v1.2.7 // indirect
 	github.com/charmbracelet/lipgloss v0.8.0 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi v1.5.4 // indirect
 	github.com/go-logfmt/logfmt v0.6.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
@@ -20,6 +22,7 @@ require (
 	github.com/miekg/dns v1.1.50 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rivo/uniseg v0.2.0 // indirect
 	github.com/tadglines/go-pkgs v0.0.0-20210623144937-b983b20f54f9 // indirect
 	github.com/xiam/to v0.0.0-20200126224905-d60d31e03561 // indirect
@@ -29,4 +32,5 @@ require (
 	golang.org/x/sys v0.7.0 // indirect
 	golang.org/x/text v0.3.8 // indirect
 	golang.org/x/tools v0.1.12 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

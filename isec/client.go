@@ -65,24 +65,6 @@ func New(host, port, pass string) (*Client, error) {
 	return cli, cli.init()
 }
 
-type OverallStatus struct {
-	Model       string
-	Version     string
-	Status      State
-	ZonesFiring bool
-	ZonesClosed bool
-	Siren       bool
-	Partitions  []Partition
-}
-
-type Partition struct {
-	Number int
-	Armed  bool
-	Fired  bool
-	Firing bool
-	Stay   bool
-}
-
 func (c *Client) TurnOffSiren(partition byte) error {
 	log.Debug("turn off siren")
 	c.lock.Lock()
@@ -130,6 +112,7 @@ func (c *Client) Status() (OverallStatus, error) {
 		ZonesFiring: reply[20]&0x8 > 0,
 		ZonesClosed: reply[20]&0x4 > 0,
 		Siren:       reply[20]&0x2 > 0,
+		Zones:       make([]Zone, 48),
 	}
 
 	for i := 0; i < 17; i++ {
@@ -145,6 +128,34 @@ func (c *Client) Status() (OverallStatus, error) {
 			Fired:  reply[21+i]&0x08 > 0,
 			Stay:   reply[21+i]&0x40 > 0,
 		})
+	}
+
+	for i := 0; i < 48; i++ {
+		result.Zones[i].Number = i + 1
+	}
+
+	for i, octet := range reply[38:46] {
+		for j := 0; j < 8; j++ {
+			if octet&(1<<j) > 0 {
+				result.Zones[i+j].Open = true
+			}
+		}
+	}
+
+	for i, octet := range reply[46:54] {
+		for j := 0; j < 8; j++ {
+			if octet&(1<<j) > 0 {
+				result.Zones[i+j].Violated = true
+			}
+		}
+	}
+
+	for i, octet := range reply[54:62] {
+		for j := 0; j < 8; j++ {
+			if octet&(1<<j) > 0 {
+				result.Zones[i+j].Anulated = true
+			}
+		}
 	}
 
 	return result, nil

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"os/signal"
 	"sync"
@@ -17,9 +18,11 @@ import (
 )
 
 type Config struct {
-	Host     string `env:"HOST,required"`
-	Port     string `env:"PORT"              envDefault:"9009"`
-	Password string `env:"PASSWORD,required"`
+	Host         string `env:"HOST,required"`
+	Port         string `env:"PORT"              envDefault:"9009"`
+	Password     string `env:"PASSWORD,required"`
+	MotionZones  []int  `env:"MOTION"`
+	ContactZones []int  `env:"CONTACT"`
 }
 
 func main() {
@@ -38,13 +41,18 @@ func main() {
 		}
 	}()
 
+	status, err := cli.Status()
+	if err != nil {
+		log.Fatal("could not init isecnet2 homebridge", "err", err)
+	}
+
 	// Create the switch accessory.
 	a := accessory.NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",
 		SerialNumber: "0xf0f0",
 		Manufacturer: "Intelbras",
-		Model:        "AMT8000",
-		Firmware:     "0.0.0",
+		Model:        status.Model,
+		Firmware:     status.Version,
 	})
 	a.SecuritySystem.SecuritySystemTargetState.OnValueRemoteUpdate(func(v int) {
 		switch v {
@@ -71,6 +79,30 @@ func main() {
 		}
 	})
 
+	contactZones := make([]*ContactSensor, len(cfg.ContactZones))
+	motionZones := make([]*MotionSensor, len(cfg.MotionZones))
+
+	for i, zone := range cfg.ContactZones {
+		sensor := newContactSensor(accessory.Info{
+			Name:         fmt.Sprintf("Zone %d", zone),
+			Manufacturer: "Intelbras",
+		})
+		if status.Zones[zone-1].Open {
+			sensor.ContactSensor.ContactSensorState.SetValue(1)
+		}
+		contactZones[i] = sensor
+	}
+	for i, zone := range cfg.MotionZones {
+		sensor := newMotionSensor(accessory.Info{
+			Name:         fmt.Sprintf("Zone %d", zone),
+			Manufacturer: "Intelbras",
+		})
+		if status.Zones[zone-1].Open {
+			sensor.MotionSensor.MotionDetected.SetValue(true)
+		}
+		motionZones[i] = sensor
+	}
+
 	go func() {
 		var once sync.Once
 		tick := time.NewTicker(time.Second * 3)
@@ -96,14 +128,35 @@ func main() {
 				log.Info("set current state", "state", state, "err", err)
 			}
 
+			for i, zone := range cfg.ContactZones {
+				current := boolToInt(status.Zones[zone-1].Open)
+				v := contactZones[i].ContactSensor.ContactSensorState.Value()
+				if v != current {
+					log.Info("contact", "zone", zone, "status", current)
+					contactZones[i].ContactSensor.ContactSensorState.SetValue(current)
+				}
+			}
+			for i, zone := range cfg.MotionZones {
+				current := status.Zones[zone-1].Open
+				v := motionZones[i].MotionSensor.MotionDetected.Value()
+				if v != current {
+					log.Info("motion", "zone", zone, "status", current)
+					motionZones[i].MotionSensor.MotionDetected.SetValue(current)
+				}
+			}
+
 		}
 	}()
+
+	bridge := accessory.New(accessory.Info{
+		Name: "Bridge",
+	}, accessory.TypeBridge)
 
 	// Store the data in the "./db" directory.
 	fs := hap.NewFsStore("./db")
 
 	// Create the hap server.
-	server, err := hap.NewServer(fs, a.A)
+	server, err := hap.NewServer(fs, bridge, allSensors(a, contactZones, motionZones)...)
 	if err != nil {
 		// stop if an error happens
 		log.Fatal("fail", "error", err)
@@ -145,4 +198,34 @@ func toCurrentState(status isec.OverallStatus) int {
 		log.Debug("set: disarm")
 		return characteristic.SecuritySystemCurrentStateDisarmed
 	}
+}
+
+func allSensors(
+	alarm *accessory.SecuritySystem,
+	contacts []*ContactSensor,
+	motions []*MotionSensor,
+) []*accessory.A {
+	result := []*accessory.A{alarm.A}
+	for _, c := range contacts {
+		if c == nil {
+			log.Warn("nil")
+			continue
+		}
+		result = append(result, c.A)
+	}
+	for _, m := range motions {
+		if m == nil {
+			log.Warn("nil")
+			continue
+		}
+		result = append(result, m.A)
+	}
+	return result
+}
+
+func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
