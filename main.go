@@ -58,9 +58,9 @@ func main() {
 		"contact_sensor_zones", cfg.ContactZones,
 	)
 
-	bridge := accessory.New(accessory.Info{
+	bridge := accessory.NewBridge(accessory.Info{
 		Name: "Alarm Bridge",
-	}, accessory.TypeBridge)
+	})
 
 	alarm := accessory.NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",

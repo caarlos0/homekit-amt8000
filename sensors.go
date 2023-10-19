@@ -10,7 +10,6 @@ type ContactSensor struct {
 	ContactSensor *service.ContactSensor
 }
 
-// NewTemperatureSensor returns a Thermometer which implements model.Thermometer.
 func newContactSensor(info accessory.Info) *ContactSensor {
 	a := ContactSensor{}
 	a.A = accessory.New(info, accessory.TypeSensor)
@@ -26,7 +25,6 @@ type MotionSensor struct {
 	MotionSensor *service.MotionSensor
 }
 
-// NewTemperatureSensor returns a Thermometer which implements model.Thermometer.
 func newMotionSensor(info accessory.Info) *MotionSensor {
 	a := MotionSensor{}
 	a.A = accessory.New(info, accessory.TypeSensor)
