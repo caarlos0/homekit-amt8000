@@ -7,6 +7,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
+	"github.com/charmbracelet/log"
 )
 
 const timeout = 15 * time.Second
@@ -60,13 +62,7 @@ func New(host, port, pass string) (*Client, error) {
 		addr: net.JoinHostPort(host, port),
 		pass: pass,
 	}
-	if err := cli.init(); err != nil {
-		return nil, err
-	}
-	if err := cli.auth(); err != nil {
-		return nil, err
-	}
-	return cli, nil
+	return cli, cli.init()
 }
 
 type OverallStatus struct {
@@ -88,6 +84,7 @@ type Partition struct {
 }
 
 func (c *Client) TurnOffSiren(partition byte) error {
+	log.Debug("turn off siren")
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	payload := createPayload(cmdTurnOffSiren, []byte{partition})
@@ -98,6 +95,7 @@ func (c *Client) TurnOffSiren(partition byte) error {
 }
 
 func (c *Client) CleanFirings() error {
+	log.Debug("clean firings")
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	payload := createPayload(cmdCleanFiring, nil)
@@ -108,6 +106,7 @@ func (c *Client) CleanFirings() error {
 }
 
 func (c *Client) Status() (OverallStatus, error) {
+	log.Debug("status")
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	payload := createPayload(cmdStatus, nil)
@@ -122,7 +121,7 @@ func (c *Client) Status() (OverallStatus, error) {
 
 	_, reply := parseResponse(resp)
 	if len(reply) < 21 {
-		return OverallStatus{}, fmt.Errorf("alarm between changing states right now")
+		return OverallStatus{}, fmt.Errorf("client needs recycling")
 	}
 	result := OverallStatus{
 		Model:       modelName(reply[0]),
@@ -165,6 +164,7 @@ func modelName(b byte) string {
 }
 
 func (c *Client) Disable(partition byte) error {
+	log.Debug("disarm", "partition", partition)
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdDisarm})
@@ -175,6 +175,7 @@ func (c *Client) Disable(partition byte) error {
 }
 
 func (c *Client) Arm(partition byte) error {
+	log.Debug("arm", "partition", partition)
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdArm})
@@ -191,13 +192,12 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) recycle() error {
-	if err := c.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+	log.Debug("recycling client...")
+	time.Sleep(time.Second)
+	if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 		return fmt.Errorf("could not recycle client: %w", err)
 	}
 	if err := c.init(); err != nil {
-		return fmt.Errorf("could not recycle client: %w", err)
-	}
-	if err := c.auth(); err != nil {
 		return fmt.Errorf("could not recycle client: %w", err)
 	}
 	return nil
@@ -209,15 +209,9 @@ func (c *Client) init() error {
 		return fmt.Errorf("could not connect: %w", err)
 	}
 	c.conn = conn
-	return nil
-}
 
-func (c *Client) auth() error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	payload := makeAuthPayload(c.pass)
-	_, err := c.conn.Write(payload)
-	if err != nil {
+	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not auth: %w", err)
 	}
 
