@@ -11,21 +11,32 @@ import (
 	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
 	"github.com/brutella/hap/characteristic"
-	"github.com/caarlos0/isecnet2/isec"
+	"github.com/caarlos0/amt8000-homebridge/isec"
+	"github.com/caarlos0/env/v9"
 	"github.com/charmbracelet/log"
 )
 
-func newCli() *isec.Client {
-	cli, err := isec.New("192.168.1.111", "9009", "307924")
-	if err != nil {
-		log.Fatal("could not init amt8000", "err", err)
-	}
-	return cli
+type Config struct {
+	Host     string `env:"HOST,required"`
+	Port     string `env:"PORT"              envDefault:"9009"`
+	Password string `env:"PASSWORD,required"`
 }
 
 func main() {
-	cli := newCli()
-	defer func() { _ = cli.Close() }()
+	var cfg Config
+	if err := env.Parse(&cfg); err != nil {
+		log.Fatal("could not parse env", "err", err)
+	}
+
+	cli, err := isec.New(cfg.Host, cfg.Port, cfg.Password)
+	if err != nil {
+		log.Fatal("could not init isecnet2 client", "err", err)
+	}
+	defer func() {
+		if err := cli.Close(); err != nil {
+			log.Error("could not close isecnet2 client", "err", err)
+		}
+	}()
 
 	// Create the switch accessory.
 	a := accessory.NewSecuritySystem(accessory.Info{
@@ -58,10 +69,6 @@ func main() {
 				log.Error("could not disarm", "err", err)
 			}
 		}
-		_ = cli.Close()
-		cli = nil
-		time.Sleep(time.Second)
-		cli = newCli()
 	})
 
 	go func() {
@@ -80,11 +87,13 @@ func main() {
 			a.Info.Model.SetValue(status.Model)
 			// sets the initial state, otherwise it'll keep in "arming" when server restarts
 			once.Do(func() {
-				a.SecuritySystem.SecuritySystemTargetState.SetValue(toCurrentState(status))
+				state := toCurrentState(status)
+				err := a.SecuritySystem.SecuritySystemTargetState.SetValue(state)
+				log.Info("set target state", "state", state, "err", err)
 			})
 			if state := toCurrentState(status); a.SecuritySystem.SecuritySystemCurrentState.Value() != state {
-				log.Info("set", "state", state)
-				a.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
+				err := a.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
+				log.Info("set current state", "state", state, "err", err)
 			}
 
 		}

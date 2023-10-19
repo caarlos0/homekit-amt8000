@@ -1,10 +1,10 @@
 package isec
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net"
-	"strconv"
 	"sync"
 	"time"
 )
@@ -51,14 +51,19 @@ func (s State) String() string {
 type Client struct {
 	lock sync.Mutex
 	conn net.Conn
+	addr string
+	pass string
 }
 
 func New(host, port, pass string) (*Client, error) {
-	cli := &Client{}
-	if err := cli.init(host, port); err != nil {
+	cli := &Client{
+		addr: net.JoinHostPort(host, port),
+		pass: pass,
+	}
+	if err := cli.init(); err != nil {
 		return nil, err
 	}
-	if err := cli.auth(pass); err != nil {
+	if err := cli.auth(); err != nil {
 		return nil, err
 	}
 	return cli, nil
@@ -89,7 +94,7 @@ func (c *Client) TurnOffSiren(partition byte) error {
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not turn siren off %v: %w", partition, err)
 	}
-	return nil
+	return c.recycle()
 }
 
 func (c *Client) CleanFirings() error {
@@ -99,7 +104,7 @@ func (c *Client) CleanFirings() error {
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not clean firing: %w", err)
 	}
-	return nil
+	return c.recycle()
 }
 
 func (c *Client) Status() (OverallStatus, error) {
@@ -166,7 +171,7 @@ func (c *Client) Disable(partition byte) error {
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not disarm: %w", err)
 	}
-	return nil
+	return c.recycle()
 }
 
 func (c *Client) Arm(partition byte) error {
@@ -176,7 +181,7 @@ func (c *Client) Arm(partition byte) error {
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not arm %v: %w", partition, err)
 	}
-	return nil
+	return c.recycle()
 }
 
 func (c *Client) Close() error {
@@ -185,8 +190,21 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
-func (c *Client) init(host, port string) error {
-	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, port), timeout)
+func (c *Client) recycle() error {
+	if err := c.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
+		return fmt.Errorf("could not recycle client: %w", err)
+	}
+	if err := c.init(); err != nil {
+		return fmt.Errorf("could not recycle client: %w", err)
+	}
+	if err := c.auth(); err != nil {
+		return fmt.Errorf("could not recycle client: %w", err)
+	}
+	return nil
+}
+
+func (c *Client) init() error {
+	conn, err := net.DialTimeout("tcp", c.addr, timeout)
 	if err != nil {
 		return fmt.Errorf("could not connect: %w", err)
 	}
@@ -194,16 +212,21 @@ func (c *Client) init(host, port string) error {
 	return nil
 }
 
-func (c *Client) auth(pass string) error {
+func (c *Client) auth() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
-	payload := makeAuthPayload(pass)
+	payload := makeAuthPayload(c.pass)
 	_, err := c.conn.Write(payload)
 	if err != nil {
 		return fmt.Errorf("could not auth: %w", err)
 	}
 
-	resp, err := io.ReadAll(io.LimitReader(c.conn, int64(payloadSize(payload))))
+	size, err := payloadSize(payload)
+	if err != nil {
+		return fmt.Errorf("could not auth: %w", err)
+	}
+
+	resp, err := io.ReadAll(io.LimitReader(c.conn, int64(size)))
 	if err != nil {
 		return fmt.Errorf("could not auth: %w", err)
 	}
@@ -217,94 +240,4 @@ func (c *Client) auth(pass string) error {
 		)
 	}
 	return nil
-}
-
-func makeAuthPayload(pwd string) []byte {
-	softwareType := []byte{0x02}
-	softwareVersion := []byte{0x10}
-	contactID, err := contactIDEncode(pwd)
-	if err != nil {
-		panic(err)
-	}
-	payload := []byte{}
-	payload = append(payload, softwareType...)
-	payload = append(payload, contactID...)
-	payload = append(payload, softwareVersion...)
-	return createPayload(cmdAuth, payload)
-}
-
-func createPayload(cmd int, input []byte) []byte {
-	centralID := be16(0x0000)
-	ourID := be16(0x8fff)
-	length := be16(len(input) + 2)
-	cmd_enc := be16(cmd)
-	payload := []byte{}
-	payload = append(payload, centralID...)
-	payload = append(payload, ourID...)
-	payload = append(payload, length...)
-	payload = append(payload, cmd_enc...)
-	payload = append(payload, input...)
-	payload = append(payload, checksum(payload))
-	return payload
-}
-
-func be16(n int) []byte {
-	return []byte{byte(n / 256), byte(n % 256)}
-}
-
-func parsebe16(buf []byte) int {
-	return int(buf[0])*256 + int(buf[1])
-}
-
-func checksum(pacote []byte) byte {
-	var check byte
-	for _, n := range pacote {
-		check ^= n
-	}
-	check ^= 0xff
-	check &= 0xff
-	return check
-}
-
-func contactIDEncode(pwd string) ([]byte, error) {
-	var buf []byte
-	num, err := strconv.Atoi(pwd)
-	if err != nil {
-		return nil, err
-	}
-	for i := 0; i < len(pwd); i++ {
-		digit, err := strconv.Atoi(string(pwd[i]))
-		if err != nil {
-			return nil, err
-		}
-		digit %= 10
-		num /= 10
-		if digit == 0 {
-			digit = 0x0a
-		}
-		buf = append(buf, byte(digit))
-	}
-	return buf, nil
-}
-
-func payloadSize(payload []byte) int {
-	fmt.Println(payload)
-	if len(payload) < 9 {
-		panic("invalid frame")
-	}
-	n := parsebe16(payload[4:6])
-	if len(payload) < n {
-		panic("invalid frame")
-	}
-	return n
-}
-
-func parseResponse(resp []byte) (int, []byte) {
-	lenPayload := parsebe16(resp[4:6]) - 2
-	cmd := parsebe16(resp[6:8])
-	if len(resp) < 8+lenPayload || lenPayload < 0 {
-		return cmd, nil
-	}
-	payload := resp[8 : 8+lenPayload]
-	return cmd, payload
 }

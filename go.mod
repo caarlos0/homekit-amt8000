@@ -1,9 +1,10 @@
-module github.com/caarlos0/isecnet2
+module github.com/caarlos0/amt8000-homebridge
 
 go 1.21.1
 
 require (
 	github.com/brutella/hap v0.0.27
+	github.com/caarlos0/env/v9 v9.0.0
 	github.com/charmbracelet/log v0.2.5
 )
 
