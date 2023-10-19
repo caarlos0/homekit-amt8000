@@ -160,19 +160,19 @@ func toCurrentState(cfg Config, status isec.OverallStatus) int {
 	switch status.Status {
 	case isec.Partial, isec.Armed:
 		for _, part := range status.Partitions {
-			log.Info("partition armed", "part", part.Number, "armed", part.Armed)
+			log.Debug("partition armed", "part", part.Number, "armed", part.Armed)
 			if !part.Armed {
 				continue
 			}
 			switch toPartition(part.Number) {
 			case cfg.NightPartition:
-				log.Info("set: away night")
+				log.Debug("set: away night")
 				return characteristic.SecuritySystemCurrentStateNightArm
 			case cfg.AwayPartition:
-				log.Info("set: away arm")
+				log.Debug("set: away arm")
 				return characteristic.SecuritySystemCurrentStateAwayArm
 			case cfg.StayPartition:
-				log.Info("set: stay arm")
+				log.Debug("set: stay arm")
 				return characteristic.SecuritySystemCurrentStateStayArm
 			default:
 				log.Warn(
@@ -183,10 +183,10 @@ func toCurrentState(cfg Config, status isec.OverallStatus) int {
 			}
 		}
 
-		log.Info("set: none")
+		log.Debug("set: none")
 		return -1
 	default:
-		log.Info("set: disarm")
+		log.Debug("set: disarm")
 		return characteristic.SecuritySystemCurrentStateDisarmed
 	}
 }
