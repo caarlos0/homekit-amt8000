@@ -73,16 +73,32 @@ func contactIDEncode(pwd string) ([]byte, error) {
 	return buf, nil
 }
 
-func payloadSize(payload []byte) (int64, error) {
-	if len(payload) < 9 {
-		return 0, fmt.Errorf("wrong payload length: %d", len(payload))
+func authReplySize(pass string) int64 {
+	switch len(pass) {
+	case 6:
+		return 10
+	default:
+		return 9
 	}
-	// TODO: this is likely not correct
-	n := mergeOctets(payload[4:6])
-	if len(payload) < n {
-		return 0, fmt.Errorf("wrong merged payload length: %d < %d", len(payload), n)
+}
+
+func parseAuthResponse(resp []byte) error {
+	cmd, result := parseResponse(resp)
+	if cmd != 0xf0f0 {
+		return fmt.Errorf("invalid command: %v", cmd)
 	}
-	return int64(n), nil
+	if len(result) == 0 {
+		return fmt.Errorf("invalid response: %v", result)
+	}
+
+	switch result[0] {
+	case 0:
+		return nil
+	case 1:
+		return fmt.Errorf("invalid password")
+	default:
+		return fmt.Errorf("authentication failed: %v", result[0])
+	}
 }
 
 func parseResponse(resp []byte) (int, []byte) {

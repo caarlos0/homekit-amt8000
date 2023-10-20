@@ -19,13 +19,13 @@ func TestIsec(t *testing.T) {
 	for _, zone := range status.Zones {
 		if zone.Open || zone.Violated || zone.Anulated || zone.Tamper || zone.LowBattery ||
 			zone.ShortCircuit {
-			t.Logf("%+v", zone)
+			t.Logf("zone: %+v", zone)
 		}
 	}
 
 	for _, part := range status.Partitions {
 		if part.Stay || part.Armed || part.Fired || part.Firing {
-			t.Logf("%+v", part)
+			t.Logf("partition: %+v", part)
 		}
 	}
 }

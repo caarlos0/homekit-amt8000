@@ -19,7 +19,7 @@ const AllPartitions = 0xff
 
 const (
 	cmdAuth         = 0xf0f0
-	cmdDisconnect   = 0xf0f1 // not tested yet
+	cmdDisconnect   = 0xf0f1
 	cmdStatus       = 0x0b4a
 	cmdArm          = 0x401e
 	cmdTurnOffSiren = 0x4019
@@ -32,7 +32,7 @@ type State byte
 const (
 	StateDisarmed State = 0x00
 	StatePartial  State = 0x01
-	StateArmed    State = 0x03
+	StateArmed    State = 0x03 // one must ask what 0x02 is... and why its missing...
 )
 
 const (
@@ -218,25 +218,12 @@ func (c *Client) init() error {
 		return fmt.Errorf("could not auth: %w", c.handleClientError(err))
 	}
 
-	size, err := payloadSize(payload)
+	resp, err := c.limitTimedRead(authReplySize(c.pass))
 	if err != nil {
 		return fmt.Errorf("could not auth: %w", err)
 	}
 
-	resp, err := c.limitTimedRead(int64(size))
-	if err != nil {
-		return fmt.Errorf("could not auth: %w", err)
-	}
-
-	cmd, result := parseResponse(resp)
-	if cmd != cmdAuth || len(result) != 1 {
-		return fmt.Errorf(
-			"could not auth: cmd_is_auth=%v result=%v",
-			cmd != cmdAuth,
-			result,
-		)
-	}
-	return nil
+	return parseAuthResponse(resp)
 }
 
 func (c *Client) limitTimedRead(n int64) ([]byte, error) {
