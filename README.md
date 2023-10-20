@@ -1,18 +1,51 @@
 # homekit-amt8000
 
-## Configuration:
+This projects creates a homekit bridge and accessories for the Intelbras AMT8000
+alarm system.
+
+## Configuration
+
+This project is set up using environment variables.
+
+Full list of them and what they are for:
 
 ```sh
-HOST=192.168.207.4     # mandatory
-PASSWORD=123456        # mandatory
-PORT=9009              # default is 9009
-MOTION="1,2,3"         # zones that are motion sensors
-CONTACT="4,5,6"        # zones that are contact sensors (i.e. doors)
-STAY="1"               # partition to arm when set stay mode - default is 1
-NIGHT="2"              # partition to arm when set to night mode - default is 2
-AWAY="0"               # partition to arm when set to away mode - default is 0
-ZONE_NAMES="Z1,Z2"     # indexed zone names
-ALLOW_BYPASS="1,2,3,4" # zones to show the bypass switch
+# Central IP addr.
+# required.
+HOST=192.168.207.4
+
+# Central password.
+# required.
+PASSWORD=123456
+
+# Cental port.
+# default: 9009.
+PORT=9009
+
+# Zones that are motion sensors.
+MOTION="1,2,3"
+
+# Zones that are contact sensors (i.e. doors).
+CONTACT="4,5,6"
+
+# Partition to arm when set stay mode.
+# default: 1
+STAY="1"
+
+# Partition to arm when set to night mode.
+# default: 2
+NIGHT="2"
+
+# Partition to arm when set to away mode.
+# default: 0 (all partitions)
+AWAY="0"
+
+# Indexed zone names.
+# default: [Zone 1, Zone 2, ...]
+ZONE_NAMES="Kitchen door,Living Room Window"
+
+# Zones that allow bypass.
+ALLOW_BYPASS="1,2,3,4"
 ```
 
 ## Running
@@ -38,7 +71,8 @@ Setup code is `001 02 003`.
 
 [The "Intelbras Documentation Sucks" License](./LICENSE.md).
 
-## Previous work
+## Previous work and thanks
 
 - https://github.com/elvis-epx/alarme-intelbras
 - https://github.com/thspinto/isecnet-go
+- Wireshark
