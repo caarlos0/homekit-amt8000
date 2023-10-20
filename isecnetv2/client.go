@@ -13,7 +13,7 @@ import (
 	"github.com/charmbracelet/log"
 )
 
-const timeout = 15 * time.Second
+const timeout = 5 * time.Second
 
 const AllPartitions = 0xff
 
