@@ -18,10 +18,12 @@ const AllPartitions = 0xff
 
 const (
 	cmdAuth         = 0xf0f0
+	cmdDisconnect   = 0xf0f1 // not tested yet
 	cmdStatus       = 0x0b4a
 	cmdArm          = 0x401e
 	cmdTurnOffSiren = 0x4019
 	cmdCleanFiring  = 0x4013
+	cmdBypass       = 0x401f
 )
 
 type State byte
@@ -64,6 +66,40 @@ func New(host, port, pass string) (*Client, error) {
 		pass: pass,
 	}
 	return cli, cli.init()
+}
+
+func (c *Client) Panic() error {
+	// TODO: impl
+	return nil
+}
+
+// adding bypass of zone 1:
+// 0000   00 00 00 01 00 04 40 1f 00 01 a4
+//
+// removing bypass of zone 1:
+// 0000   00 00 00 01 00 04 40 1f 00 00 a5
+//
+// adding bypass of zone 2:
+// 0000   00 00 00 01 00 04 40 1f 01 01 a5
+//
+// removing bypass of zone 2:
+// 0000   00 00 00 01 00 04 40 1f 01 00 a4
+func (c *Client) Bypass(zone int, set bool) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
+	// 0x01 add
+	// 0x00 remove
+	var b byte = 0x00
+	if set {
+		b = 0x01
+	}
+
+	payload := createPayload(cmdBypass, []byte{byte(zone - 1), b})
+	if _, err := c.conn.Write(payload); err != nil {
+		return fmt.Errorf("could not set bypass=%v %v: %w", set, zone, c.handleWriteError(err))
+	}
+	return c.recycle()
 }
 
 func (c *Client) TurnOffSiren(partition byte) error {
@@ -164,6 +200,9 @@ func (c *Client) handleWriteError(err error) error {
 func (c *Client) Close() error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+	if _, err := c.conn.Write(createPayload(cmdDisconnect, nil)); err != nil {
+		return fmt.Errorf("could not disconnect: %w", err)
+	}
 	return c.conn.Close()
 }
 
@@ -204,8 +243,8 @@ func (c *Client) init() error {
 	cmd, result := parseResponse(resp)
 	if cmd != cmdAuth || len(result) != 1 {
 		return fmt.Errorf(
-			"could not auth: cmd is not auth, payload size is wrong: %v %v",
-			cmd,
+			"could not auth: cmd_is_auth=%v result=%v",
+			cmd != cmdAuth,
 			result,
 		)
 	}

@@ -106,29 +106,28 @@ func main() {
 
 			for i, zone := range cfg.AllowBypassZones {
 				current := status.Zones[zone-1].Anulated
-				v := bypasses[i].Switch.On.Value()
-				if v != current {
-					bypasses[i].Switch.On.SetValue(current)
-					log.Info("contact", "zone", zone, "status", current)
+				if v := bypasses[i].Switch.On.Value(); v == current {
+					continue
 				}
+				bypasses[i].Switch.On.SetValue(current)
+				log.Info("contact", "zone", zone, "status", current)
 			}
 			for i, zone := range cfg.ContactZones {
 				current := boolToInt(status.Zones[zone-1].Open)
-				v := contacts[i].ContactSensor.ContactSensorState.Value()
-				if v != current {
-					contacts[i].ContactSensor.ContactSensorState.SetValue(current)
-					log.Info("contact", "zone", zone, "status", current)
+				if v := contacts[i].ContactSensor.ContactSensorState.Value(); v == current {
+					continue
 				}
+				_ = contacts[i].ContactSensor.ContactSensorState.SetValue(current)
+				log.Info("contact", "zone", zone, "status", current)
 			}
 			for i, zone := range cfg.MotionZones {
 				current := status.Zones[zone-1].Open
-				v := motions[i].MotionSensor.MotionDetected.Value()
-				if v != current {
-					motions[i].MotionSensor.MotionDetected.SetValue(current)
-					log.Info("motion", "zone", zone, "status", current)
+				if v := motions[i].MotionSensor.MotionDetected.Value(); v == current {
+					continue
 				}
+				motions[i].MotionSensor.MotionDetected.SetValue(current)
+				log.Info("motion", "zone", zone, "status", current)
 			}
-
 		}
 	}()
 
@@ -271,12 +270,15 @@ func setupZones(
 	}
 
 	for i, zone := range cfg.AllowBypassZones {
+		zone := zone
 		a := accessory.NewSwitch(accessory.Info{
 			Name:         zoneName(cfg, zone, "bypass"),
 			Manufacturer: "Intelbras",
 		})
 		a.Switch.On.OnValueRemoteUpdate(func(v bool) {
-			log.Warn("changing bypass for zones not implemented yet", "v", v)
+			if err := cli.Bypass(zone, v); err != nil {
+				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)
+			}
 		})
 		if status.Zones[zone-1].Anulated {
 			a.Switch.On.SetValue(true)

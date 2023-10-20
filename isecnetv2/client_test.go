@@ -10,6 +10,8 @@ func TestIsec(t *testing.T) {
 	cli, err := New("192.168.1.111", "9009", "307924")
 	require.NoError(t, err)
 
+	require.NoError(t, cli.Bypass(1, false))
+
 	status, err := cli.Status()
 	require.NoError(t, err)
 
