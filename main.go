@@ -20,14 +20,16 @@ import (
 )
 
 type Config struct {
-	Host           string `env:"HOST,required"`
-	Port           string `env:"PORT"              envDefault:"9009"`
-	Password       string `env:"PASSWORD,required"`
-	MotionZones    []int  `env:"MOTION"`
-	ContactZones   []int  `env:"CONTACT"`
-	StayPartition  int    `env:"STAY"              envDefault:"1"`
-	AwayPartition  int    `env:"AWAY"              envDefault:"0"`
-	NightPartition int    `env:"NIGHT"             envDefault:"2"`
+	Host             string   `env:"HOST,required"`
+	Port             string   `env:"PORT"              envDefault:"9009"`
+	Password         string   `env:"PASSWORD,required"`
+	MotionZones      []int    `env:"MOTION"`
+	ContactZones     []int    `env:"CONTACT"`
+	AllowBypassZones []int    `env:"ALLOW_BYPASS"`
+	StayPartition    int      `env:"STAY"              envDefault:"1"`
+	AwayPartition    int      `env:"AWAY"              envDefault:"0"`
+	NightPartition   int      `env:"NIGHT"             envDefault:"2"`
+	ZoneNames        []string `env:"ZONE_NAMES"`
 }
 
 func main() {
@@ -72,7 +74,7 @@ func main() {
 	})
 	alarm.SecuritySystem.SecuritySystemTargetState.OnValueRemoteUpdate(alarmUpdateHandler(cli, cfg))
 
-	contactZones, motionZones := setupZones(cfg, status)
+	contacts, motions, bypasses := setupZones(cli, cfg, status)
 
 	go func() {
 		var once sync.Once
@@ -102,19 +104,27 @@ func main() {
 				log.Info("set current state", "state", state, "err", err)
 			}
 
+			for i, zone := range cfg.AllowBypassZones {
+				current := status.Zones[zone-1].Anulated
+				v := bypasses[i].Switch.On.Value()
+				if v != current {
+					bypasses[i].Switch.On.SetValue(current)
+					log.Info("contact", "zone", zone, "status", current)
+				}
+			}
 			for i, zone := range cfg.ContactZones {
 				current := boolToInt(status.Zones[zone-1].Open)
-				v := contactZones[i].ContactSensor.ContactSensorState.Value()
+				v := contacts[i].ContactSensor.ContactSensorState.Value()
 				if v != current {
-					contactZones[i].ContactSensor.ContactSensorState.SetValue(current)
+					contacts[i].ContactSensor.ContactSensorState.SetValue(current)
 					log.Info("contact", "zone", zone, "status", current)
 				}
 			}
 			for i, zone := range cfg.MotionZones {
 				current := status.Zones[zone-1].Open
-				v := motionZones[i].MotionSensor.MotionDetected.Value()
+				v := motions[i].MotionSensor.MotionDetected.Value()
 				if v != current {
-					motionZones[i].MotionSensor.MotionDetected.SetValue(current)
+					motions[i].MotionSensor.MotionDetected.SetValue(current)
 					log.Info("motion", "zone", zone, "status", current)
 				}
 			}
@@ -129,7 +139,7 @@ func main() {
 	server, err := hap.NewServer(
 		fs,
 		bridge.A,
-		securityAccessories(alarm, contactZones, motionZones)...,
+		securityAccessories(alarm, contacts, motions, bypasses)...,
 	)
 	if err != nil {
 		// stop if an error happens
@@ -201,20 +211,16 @@ func securityAccessories(
 	alarm *accessory.SecuritySystem,
 	contacts []*ContactSensor,
 	motions []*MotionSensor,
+	bypasses []*accessory.Switch,
 ) []*accessory.A {
 	result := []*accessory.A{alarm.A}
 	for _, c := range contacts {
-		if c == nil {
-			log.Warn("nil")
-			continue
-		}
 		result = append(result, c.A)
 	}
 	for _, m := range motions {
-		if m == nil {
-			log.Warn("nil")
-			continue
-		}
+		result = append(result, m.A)
+	}
+	for _, m := range bypasses {
 		result = append(result, m.A)
 	}
 	return result
@@ -227,31 +233,58 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-func setupZones(cfg Config, status isecnetv2.OverallStatus) ([]*ContactSensor, []*MotionSensor) {
-	contactZones := make([]*ContactSensor, len(cfg.ContactZones))
-	motionZones := make([]*MotionSensor, len(cfg.MotionZones))
+func zoneName(cfg Config, n int, s string) string {
+	names := cfg.ZoneNames
+	if len(names) > n-1 {
+		return fmt.Sprintf("%s %s", names[n-1], s)
+	}
+	return fmt.Sprintf("Zone %d %s", n, s)
+}
+
+func setupZones(
+	cli *isecnetv2.Client,
+	cfg Config,
+	status isecnetv2.OverallStatus,
+) ([]*ContactSensor, []*MotionSensor, []*accessory.Switch) {
+	contacts := make([]*ContactSensor, len(cfg.ContactZones))
+	motions := make([]*MotionSensor, len(cfg.MotionZones))
+	bypasses := make([]*accessory.Switch, len(cfg.AllowBypassZones))
 	for i, zone := range cfg.ContactZones {
-		sensor := newContactSensor(accessory.Info{
-			Name:         fmt.Sprintf("Zone %d", zone),
+		a := newContactSensor(accessory.Info{
+			Name:         zoneName(cfg, zone, "sensor"),
 			Manufacturer: "Intelbras",
 		})
 		if status.Zones[zone-1].Open {
-			sensor.ContactSensor.ContactSensorState.SetValue(1)
+			_ = a.ContactSensor.ContactSensorState.SetValue(1)
 		}
-		contactZones[i] = sensor
+		contacts[i] = a
 	}
 	for i, zone := range cfg.MotionZones {
-		sensor := newMotionSensor(accessory.Info{
-			Name:         fmt.Sprintf("Zone %d", zone),
+		a := newMotionSensor(accessory.Info{
+			Name:         zoneName(cfg, zone, "sensor"),
 			Manufacturer: "Intelbras",
 		})
 		if status.Zones[zone-1].Open {
-			sensor.MotionSensor.MotionDetected.SetValue(true)
+			a.MotionSensor.MotionDetected.SetValue(true)
 		}
-		motionZones[i] = sensor
+		motions[i] = a
 	}
 
-	return contactZones, motionZones
+	for i, zone := range cfg.AllowBypassZones {
+		a := accessory.NewSwitch(accessory.Info{
+			Name:         zoneName(cfg, zone, "bypass"),
+			Manufacturer: "Intelbras",
+		})
+		a.Switch.On.OnValueRemoteUpdate(func(v bool) {
+			log.Warn("changing bypass for zones not implemented yet", "v", v)
+		})
+		if status.Zones[zone-1].Anulated {
+			a.Switch.On.SetValue(true)
+		}
+		bypasses[i] = a
+	}
+
+	return contacts, motions, bypasses
 }
 
 func alarmUpdateHandler(cli *isecnetv2.Client, cfg Config) func(v int) {
