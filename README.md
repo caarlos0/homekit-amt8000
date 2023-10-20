@@ -11,6 +11,8 @@ CONTACT="4,5,6"        # zones that are contact sensors (i.e. doors)
 STAY="1"               # partition to arm when set stay mode - default is 1
 NIGHT="2"              # partition to arm when set to night mode - default is 2
 AWAY="255"             # partition to arm when set to away mode - default is 255
+ZONE_NAMES="Z1,Z2"     # indexed zone names
+ALLOW_BYPASS="1,2,3,4" # zones to show the bypass switch
 ```
 
 ## Running
