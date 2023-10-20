@@ -5,7 +5,6 @@ import (
 
 	"github.com/brutella/hap/accessory"
 	"github.com/caarlos0/homekit-amt8000/isecnetv2"
-	"github.com/charmbracelet/log"
 )
 
 func setupZones(

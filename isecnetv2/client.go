@@ -5,13 +5,20 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"os"
 	"sync"
 	"syscall"
 	"time"
 
 	"github.com/caarlos0/sync/cio"
-	"github.com/charmbracelet/log"
+	logp "github.com/charmbracelet/log"
 )
+
+var log = logp.NewWithOptions(os.Stderr, logp.Options{
+	ReportTimestamp: true,
+	TimeFormat:      time.Kitchen,
+	Prefix:          "isecnetv2",
+})
 
 const timeout = 5 * time.Second
 

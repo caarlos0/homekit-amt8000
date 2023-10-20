@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -15,8 +17,14 @@ import (
 	"github.com/brutella/hap/characteristic"
 	"github.com/caarlos0/env/v9"
 	"github.com/caarlos0/homekit-amt8000/isecnetv2"
-	"github.com/charmbracelet/log"
+	logp "github.com/charmbracelet/log"
 )
+
+var log = logp.NewWithOptions(os.Stderr, logp.Options{
+	ReportTimestamp: true,
+	TimeFormat:      time.Kitchen,
+	Prefix:          "homekit",
+})
 
 const manufacturer = "Intelbras"
 
@@ -39,6 +47,21 @@ func main() {
 		log.Fatal("could not parse env", "err", err)
 	}
 
+	log.Info(
+		"loading accessories",
+		"configuration", strings.Join([]string{
+			fmt.Sprintf("stay partition %d", cfg.StayPartition),
+			fmt.Sprintf("away_partition %d", cfg.AwayPartition),
+			fmt.Sprintf("night_partition %d", cfg.NightPartition),
+			fmt.Sprintf("motion sensors zones %v", cfg.MotionZones),
+			fmt.Sprintf("contact sensors zones %v", cfg.ContactZones),
+			fmt.Sprintf("zones with bypass %v", cfg.AllowBypassZones),
+			fmt.Sprintf("zone names %v", cfg.ZoneNames),
+		},
+			"\n",
+		),
+	)
+
 	cli, err := isecnetv2.New(cfg.Host, cfg.Port, cfg.Password)
 	if err != nil {
 		log.Fatal("could not init isecnet2 client", "err", err)
@@ -53,17 +76,6 @@ func main() {
 	if err != nil {
 		log.Fatal("could not init accessories", "err", err)
 	}
-
-	log.Info(
-		"bridge configurations:",
-		"stay_partition", cfg.StayPartition,
-		"away_partition", cfg.AwayPartition,
-		"night_partition", cfg.NightPartition,
-		"motion_sensor_zones", cfg.MotionZones,
-		"contact_sensor_zones", cfg.ContactZones,
-		"allow_byass", cfg.AllowBypassZones,
-		"zone_names", cfg.ZoneNames,
-	)
 
 	bridge := accessory.NewBridge(accessory.Info{
 		Name: "Alarm Bridge",
