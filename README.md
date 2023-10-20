@@ -32,7 +32,7 @@ Setup code is `001 02 003`.
 ## TODO
 
 - [ ] panic switch
-- [ ] bypass zones (?)
+- [x] bypass zones (?)
 - [ ] show zones firing
 - [ ] show partitions firing
 
