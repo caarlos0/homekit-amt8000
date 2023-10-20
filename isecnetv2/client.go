@@ -1,6 +1,7 @@
 package isecnetv2
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -181,10 +182,10 @@ func (c *Client) handleClientError(err error) error {
 	if err == nil {
 		return nil
 	}
-	if errors.Is(err, syscall.EPIPE) {
+	if errors.Is(err, syscall.EPIPE) || errors.Is(err, context.DeadlineExceeded) {
 		if err := c.recycle(); err != nil {
 			return fmt.Errorf(
-				"client is broken, and we failed to recycle it: %w",
+				"failed to recycle client: %w",
 				err,
 			)
 		}
@@ -202,7 +203,7 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) recycle() error {
-	log.Debug("recycling client...")
+	log.Info("recycling client...")
 	time.Sleep(time.Second)
 	if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
 		return fmt.Errorf("could not recycle client: %w", err)
@@ -227,14 +228,15 @@ func (c *Client) init() error {
 
 	resp, err := c.limitTimedRead(authReplySize(c.pass))
 	if err != nil {
-		return fmt.Errorf("could not auth: %w", err)
+		return fmt.Errorf("could not auth: %w", c.handleClientError(err))
 	}
 
 	return parseAuthResponse(resp)
 }
 
 func (c *Client) limitTimedRead(n int64) ([]byte, error) {
-	return io.ReadAll(cio.TimeoutReader(io.LimitReader(c.conn, n), timeout))
+	bts, err := io.ReadAll(cio.TimeoutReader(io.LimitReader(c.conn, n), timeout))
+	return bts, c.handleClientError(err)
 }
 
 func version(b []byte) string {
