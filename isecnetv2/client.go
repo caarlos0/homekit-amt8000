@@ -9,6 +9,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/caarlos0/sync/cio"
 	"github.com/charmbracelet/log"
 )
 
@@ -97,7 +98,7 @@ func (c *Client) Bypass(zone int, set bool) error {
 
 	payload := createPayload(cmdBypass, []byte{byte(zone - 1), b})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not set bypass=%v %v: %w", set, zone, c.handleWriteError(err))
+		return fmt.Errorf("could not set bypass=%v %v: %w", set, zone, c.handleClientError(err))
 	}
 	return c.recycle()
 }
@@ -108,7 +109,7 @@ func (c *Client) TurnOffSiren(partition byte) error {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdTurnOffSiren, []byte{partition})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not turn siren off %v: %w", partition, c.handleWriteError(err))
+		return fmt.Errorf("could not turn siren off %v: %w", partition, c.handleClientError(err))
 	}
 	return c.recycle()
 }
@@ -119,45 +120,32 @@ func (c *Client) CleanFirings() error {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdCleanFiring, nil)
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not clean firing: %w", c.handleWriteError(err))
+		return fmt.Errorf("could not clean firing: %w", c.handleClientError(err))
 	}
 	return c.recycle()
 }
 
-func (c *Client) Status() (OverallStatus, error) {
+func (c *Client) Status() (Status, error) {
 	log.Debug("status")
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	payload := createPayload(cmdStatus, nil)
 	if _, err := c.conn.Write(payload); err != nil {
-		return OverallStatus{}, fmt.Errorf("could not gather status: %w", c.handleWriteError(err))
+		return Status{}, fmt.Errorf("could not gather status: %w", c.handleClientError(err))
 	}
 
-	resp, err := io.ReadAll(io.LimitReader(c.conn, int64(len(payload))))
+	resp, err := c.limitTimedRead(int64(len(payload)))
 	if err != nil {
-		return OverallStatus{}, fmt.Errorf("could not gather status: %w", err)
+		return Status{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
-	resp2, err := io.ReadAll(io.LimitReader(c.conn, int64(resp[0])))
+	resp2, err := c.limitTimedRead(int64(resp[0]))
 	if err != nil {
-		return OverallStatus{}, fmt.Errorf("could not gather status: %w", err)
+		return Status{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
 	_, reply := parseResponse(append(resp, resp2...))
 	return fromBytes(reply), nil
-}
-
-func version(b []byte) string {
-	return fmt.Sprintf("%d.%d.%d", int(b[0]), int(b[1]), int(b[2]))
-}
-
-func modelName(b byte) string {
-	switch b {
-	case 0x01:
-		return "AMT-8000"
-	default:
-		return "Unknown"
-	}
 }
 
 func (c *Client) Disarm(partition byte) error {
@@ -166,7 +154,7 @@ func (c *Client) Disarm(partition byte) error {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdDisarm})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not disarm: %w", c.handleWriteError(err))
+		return fmt.Errorf("could not disarm: %w", c.handleClientError(err))
 	}
 	return c.recycle()
 }
@@ -177,12 +165,12 @@ func (c *Client) Arm(partition byte) error {
 	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdArm})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not arm %v: %w", partition, c.handleWriteError(err))
+		return fmt.Errorf("could not arm %v: %w", partition, c.handleClientError(err))
 	}
 	return c.recycle()
 }
 
-func (c *Client) handleWriteError(err error) error {
+func (c *Client) handleClientError(err error) error {
 	if err == nil {
 		return nil
 	}
@@ -227,7 +215,7 @@ func (c *Client) init() error {
 
 	payload := makeAuthPayload(c.pass)
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not auth: %w", c.handleWriteError(err))
+		return fmt.Errorf("could not auth: %w", c.handleClientError(err))
 	}
 
 	size, err := payloadSize(payload)
@@ -235,7 +223,7 @@ func (c *Client) init() error {
 		return fmt.Errorf("could not auth: %w", err)
 	}
 
-	resp, err := io.ReadAll(io.LimitReader(c.conn, int64(size)))
+	resp, err := c.limitTimedRead(int64(size))
 	if err != nil {
 		return fmt.Errorf("could not auth: %w", err)
 	}
@@ -249,4 +237,21 @@ func (c *Client) init() error {
 		)
 	}
 	return nil
+}
+
+func (c *Client) limitTimedRead(n int64) ([]byte, error) {
+	return io.ReadAll(cio.TimeoutReader(io.LimitReader(c.conn, n), timeout))
+}
+
+func version(b []byte) string {
+	return fmt.Sprintf("%d.%d.%d", int(b[0]), int(b[1]), int(b[2]))
+}
+
+func modelName(b byte) string {
+	switch b {
+	case 0x01:
+		return "AMT-8000"
+	default:
+		return "Unknown"
+	}
 }

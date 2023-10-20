@@ -5,6 +5,7 @@ go 1.21.1
 require (
 	github.com/brutella/hap v0.0.27
 	github.com/caarlos0/env/v9 v9.0.0
+	github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c
 	github.com/charmbracelet/log v0.2.5
 	github.com/stretchr/testify v1.8.4
 )

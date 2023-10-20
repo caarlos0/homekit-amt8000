@@ -1,6 +1,6 @@
 package isecnetv2
 
-type OverallStatus struct {
+type Status struct {
 	Model       string
 	Version     string
 	State       State
@@ -29,8 +29,8 @@ type Partition struct {
 	Stay   bool
 }
 
-func fromBytes(resp []byte) OverallStatus {
-	status := OverallStatus{
+func fromBytes(resp []byte) Status {
+	status := Status{
 		Model:       modelName(resp[0]),
 		Version:     version(resp[1:4]),
 		State:       State(resp[20] >> 5 & 0x03),

@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,6 +17,8 @@ import (
 	"github.com/caarlos0/homekit-amt8000/isecnetv2"
 	"github.com/charmbracelet/log"
 )
+
+const manufacturer = "Intelbras"
 
 type Config struct {
 	Host             string   `env:"HOST,required"`
@@ -60,6 +61,8 @@ func main() {
 		"night_partition", cfg.NightPartition,
 		"motion_sensor_zones", cfg.MotionZones,
 		"contact_sensor_zones", cfg.ContactZones,
+		"allow_byass", cfg.AllowBypassZones,
+		"zone_names", cfg.ZoneNames,
 	)
 
 	bridge := accessory.NewBridge(accessory.Info{
@@ -68,7 +71,7 @@ func main() {
 
 	alarm := accessory.NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",
-		Manufacturer: "Intelbras",
+		Manufacturer: manufacturer,
 		Model:        status.Model,
 		Firmware:     status.Version,
 	})
@@ -90,6 +93,7 @@ func main() {
 			}
 			alarm.Info.FirmwareRevision.SetValue(status.Version)
 			alarm.Info.Model.SetValue(status.Model)
+
 			// sets the initial state, otherwise it'll keep in "arming" when server restarts
 			once.Do(func() {
 				if state := toCurrentState(cfg, status); state >= 0 {
@@ -110,7 +114,7 @@ func main() {
 					continue
 				}
 				bypasses[i].Switch.On.SetValue(current)
-				log.Info("contact", "zone", zone, "status", current)
+				log.Info("bypass", "zone", zone, "status", current)
 			}
 			for i, zone := range cfg.ContactZones {
 				current := boolToInt(status.Zones[zone-1].Open)
@@ -166,7 +170,7 @@ func main() {
 	}
 }
 
-func toCurrentState(cfg Config, status isecnetv2.OverallStatus) int {
+func toCurrentState(cfg Config, status isecnetv2.Status) int {
 	if status.Siren {
 		log.Debug("set: firing")
 		return characteristic.SecuritySystemCurrentStateAlarmTriggered
@@ -230,63 +234,6 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
-}
-
-func zoneName(cfg Config, n int, s string) string {
-	names := cfg.ZoneNames
-	if len(names) > n-1 {
-		return fmt.Sprintf("%s %s", names[n-1], s)
-	}
-	return fmt.Sprintf("Zone %d %s", n, s)
-}
-
-func setupZones(
-	cli *isecnetv2.Client,
-	cfg Config,
-	status isecnetv2.OverallStatus,
-) ([]*ContactSensor, []*MotionSensor, []*accessory.Switch) {
-	contacts := make([]*ContactSensor, len(cfg.ContactZones))
-	motions := make([]*MotionSensor, len(cfg.MotionZones))
-	bypasses := make([]*accessory.Switch, len(cfg.AllowBypassZones))
-	for i, zone := range cfg.ContactZones {
-		a := newContactSensor(accessory.Info{
-			Name:         zoneName(cfg, zone, "sensor"),
-			Manufacturer: "Intelbras",
-		})
-		if status.Zones[zone-1].Open {
-			_ = a.ContactSensor.ContactSensorState.SetValue(1)
-		}
-		contacts[i] = a
-	}
-	for i, zone := range cfg.MotionZones {
-		a := newMotionSensor(accessory.Info{
-			Name:         zoneName(cfg, zone, "sensor"),
-			Manufacturer: "Intelbras",
-		})
-		if status.Zones[zone-1].Open {
-			a.MotionSensor.MotionDetected.SetValue(true)
-		}
-		motions[i] = a
-	}
-
-	for i, zone := range cfg.AllowBypassZones {
-		zone := zone
-		a := accessory.NewSwitch(accessory.Info{
-			Name:         zoneName(cfg, zone, "bypass"),
-			Manufacturer: "Intelbras",
-		})
-		a.Switch.On.OnValueRemoteUpdate(func(v bool) {
-			if err := cli.Bypass(zone, v); err != nil {
-				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)
-			}
-		})
-		if status.Zones[zone-1].Anulated {
-			a.Switch.On.SetValue(true)
-		}
-		bypasses[i] = a
-	}
-
-	return contacts, motions, bypasses
 }
 
 func alarmUpdateHandler(cli *isecnetv2.Client, cfg Config) func(v int) {
