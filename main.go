@@ -51,7 +51,7 @@ func main() {
 
 	status, err := cli.Status()
 	if err != nil {
-		log.Fatal("could not init isecnet2 homebridge", "err", err)
+		log.Fatal("could not init accessories", "err", err)
 	}
 
 	log.Info(
