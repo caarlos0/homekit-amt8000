@@ -10,7 +10,7 @@ MOTION="1,2,3"         # zones that are motion sensors
 CONTACT="4,5,6"        # zones that are contact sensors (i.e. doors)
 STAY="1"               # partition to arm when set stay mode - default is 1
 NIGHT="2"              # partition to arm when set to night mode - default is 2
-AWAY="255"             # partition to arm when set to away mode - default is 255
+AWAY="0"               # partition to arm when set to away mode - default is 0
 ZONE_NAMES="Z1,Z2"     # indexed zone names
 ALLOW_BYPASS="1,2,3,4" # zones to show the bypass switch
 ```
@@ -22,11 +22,7 @@ source .env
 go run .
 ```
 
-### Partitions
-
-- `0xff` (255) means all partitions
-- `0x01` (1) means partition 1
-- you get the idea
+## Pin
 
 Open the Home app, add new accessory, the security system should show up.
 Setup code is `001 02 003`.
