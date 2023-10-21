@@ -17,13 +17,13 @@ type Status struct {
 }
 
 type Zone struct {
-	Number       int
-	Open         bool
-	Violated     bool
-	Anulated     bool
-	LowBattery   bool
-	Tamper       bool
-	ShortCircuit bool
+	Number   int
+	Open     bool
+	Violated bool
+	Anulated bool
+	// LowBattery   bool
+	// Tamper       bool
+	// ShortCircuit bool
 }
 
 type ZoneEvent uint
@@ -33,9 +33,9 @@ const (
 	ZoneEventOpen
 	ZoneEventViolated
 	ZoneEventAnulated
-	ZoneEventLowBattery
-	ZoneEventTamper
-	ZoneEventShortCircuit
+	// ZoneEventLowBattery
+	// ZoneEventTamper
+	// ZoneEventShortCircuit
 )
 
 func (z Zone) AnyEvent() ZoneEvent {
@@ -46,11 +46,10 @@ func (z Zone) AnyEvent() ZoneEvent {
 		return ZoneEventViolated
 	case z.Anulated:
 		return ZoneEventAnulated
-	case z.Tamper:
-		fmt.Println("tamper", z.Number)
-		return ZoneEventTamper
-	case z.ShortCircuit:
-		return ZoneEventShortCircuit
+	// case z.Tamper:
+	// 	return ZoneEventTamper
+	// case z.ShortCircuit:
+	// 	return ZoneEventShortCircuit
 	default:
 		return ZoneEventClean
 	}

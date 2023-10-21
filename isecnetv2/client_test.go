@@ -17,8 +17,7 @@ func TestIsec(t *testing.T) {
 
 	require.Len(t, status.Zones, 48)
 	for _, zone := range status.Zones {
-		if zone.Open || zone.Violated || zone.Anulated || zone.Tamper || zone.LowBattery ||
-			zone.ShortCircuit {
+		if zone.AnyEvent() > ZoneEventClean {
 			t.Logf("zone: %+v", zone)
 		}
 	}
