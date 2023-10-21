@@ -2,9 +2,9 @@ package isecnetv2
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"net"
 	"os"
 	"sync"
@@ -142,14 +142,18 @@ func (c *Client) Status() (Status, error) {
 		return Status{}, fmt.Errorf("could not gather status: %w", c.handleClientError(err))
 	}
 
-	resp, err := c.limitTimedRead(int64(len(payload)))
+	resp, err := c.limitTimedRead(len(payload))
 	if err != nil {
-		return Status{}, fmt.Errorf("could not gather status: %w", err)
+		return Status{}, fmt.Errorf("could not gather status: %w", c.handleClientError(err))
 	}
 
-	resp2, err := c.limitTimedRead(int64(resp[0]))
+	if len(resp) == 0 {
+		return Status{}, fmt.Errorf("buffer is empty")
+	}
+
+	resp2, err := c.limitTimedRead(int(resp[0]))
 	if err != nil {
-		return Status{}, fmt.Errorf("could not gather status: %w", err)
+		return Status{}, fmt.Errorf("could not gather status: %w", c.handleClientError(err))
 	}
 
 	_, reply := parseResponse(append(resp, resp2...))
@@ -175,13 +179,34 @@ func (c *Client) Arm(partition byte) error {
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not arm %v: %w", partition, c.handleClientError(err))
 	}
-	return c.recycle()
+	// fail			   00000000  8f ff 00 00 00 03 f0 fd  27 a6                    |........'.|
+	// succ			   00000000  8f ff 00 00 00 04 40 1e  02 91 46                 |......@...F|
+
+	resp, err := c.limitTimedRead(6)
+	if err != nil {
+		return err
+	}
+	resp, err = c.limitTimedRead(int(resp[5]))
+	if err != nil {
+		return err
+	}
+
+	if resp[0] == 0xf0 {
+		return fmt.Errorf("failed to arm: open zones")
+	}
+
+	if err := c.recycle(); err != nil {
+		return err
+	}
+
+	if resp[0] == 0x40 {
+		return nil
+	}
+
+	return fmt.Errorf("unknown response:\n%s", hex.Dump(resp))
 }
 
 func (c *Client) handleClientError(err error) error {
-	if err == nil {
-		return nil
-	}
 	if errors.Is(err, syscall.EPIPE) || errors.Is(err, context.DeadlineExceeded) {
 		if err := c.recycle(); err != nil {
 			return fmt.Errorf(
@@ -234,9 +259,16 @@ func (c *Client) init() error {
 	return parseAuthResponse(resp)
 }
 
-func (c *Client) limitTimedRead(n int64) ([]byte, error) {
-	bts, err := io.ReadAll(cio.TimeoutReader(io.LimitReader(c.conn, n), timeout))
-	return bts, c.handleClientError(err)
+func (c *Client) limitTimedRead(n int) ([]byte, error) {
+	buf := make([]byte, n)
+	m, err := cio.TimeoutReader(c.conn, timeout).Read(buf)
+	if err != nil {
+		return nil, c.handleClientError(err)
+	}
+	if m != n {
+		return nil, fmt.Errorf("wanted %d bytes, read %d", n, m)
+	}
+	return buf, nil
 }
 
 func version(b []byte) string {

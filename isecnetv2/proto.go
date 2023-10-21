@@ -73,7 +73,7 @@ func contactIDEncode(pwd string) ([]byte, error) {
 	return buf, nil
 }
 
-func authReplySize(pass string) int64 {
+func authReplySize(pass string) int {
 	switch len(pass) {
 	case 6:
 		return 10

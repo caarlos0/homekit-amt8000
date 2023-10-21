@@ -41,6 +41,8 @@ type Config struct {
 	ZoneNames        []string `env:"ZONE_NAMES"`
 }
 
+var clientLock sync.Mutex
+
 func main() {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
@@ -72,7 +74,9 @@ func main() {
 		}
 	}()
 
+	clientLock.Lock()
 	status, err := cli.Status()
+	clientLock.Unlock()
 	if err != nil {
 		log.Fatal("could not init accessories", "err", err)
 	}
@@ -87,32 +91,32 @@ func main() {
 		Model:        status.Model,
 		Firmware:     status.Version,
 	})
-	alarm.SecuritySystem.SecuritySystemTargetState.OnValueRemoteUpdate(alarmUpdateHandler(cli, cfg))
+	if state := toCurrentState(cfg, status); state >= 0 {
+		err := alarm.SecuritySystem.SecuritySystemTargetState.SetValue(state)
+		log.Info("set target state", "state", state, "err", err)
+	}
+	alarm.SecuritySystem.SecuritySystemTargetState.SetValueRequestFunc = alarmUpdateHandler(
+		cli,
+		cfg,
+	)
 
 	contacts, motions, bypasses := setupZones(cli, cfg, status)
 
 	go func() {
-		var once sync.Once
 		tick := time.NewTicker(time.Second * 3)
 		for range tick.C {
 			if cli == nil {
 				continue
 			}
+			clientLock.Lock()
 			status, err := cli.Status()
+			clientLock.Unlock()
 			if err != nil {
 				log.Error("could not get status", "err", err)
 				continue
 			}
 			alarm.Info.FirmwareRevision.SetValue(status.Version)
 			alarm.Info.Model.SetValue(status.Model)
-
-			// sets the initial state, otherwise it'll keep in "arming" when server restarts
-			once.Do(func() {
-				if state := toCurrentState(cfg, status); state >= 0 {
-					err := alarm.SecuritySystem.SecuritySystemTargetState.SetValue(state)
-					log.Info("set target state", "state", state, "err", err)
-				}
-			})
 
 			if state := toCurrentState(cfg, status); state >= 0 &&
 				alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
@@ -248,30 +252,42 @@ func boolToInt(b bool) int {
 	return 0
 }
 
-func alarmUpdateHandler(cli *isecnetv2.Client, cfg Config) func(v int) {
-	return func(v int) {
-		switch v {
+func alarmUpdateHandler(
+	cli *isecnetv2.Client,
+	cfg Config,
+) func(value interface{}, request *http.Request) (response interface{}, code int) {
+	return func(v interface{}, _ *http.Request) (response interface{}, code int) {
+		clientLock.Lock()
+		defer clientLock.Unlock()
+		switch v.(int) {
 		case characteristic.SecuritySystemTargetStateStayArm:
 			log.Info("arm stay")
 			if err := cli.Arm(toPartition(cfg.StayPartition)); err != nil {
 				log.Error("could not arm", "err", err)
+				return nil, hap.JsonStatusResourceBusy
 			}
 		case characteristic.SecuritySystemTargetStateAwayArm:
 			log.Info("arm away")
 			if err := cli.Arm(toPartition(cfg.AwayPartition)); err != nil {
 				log.Error("could not arm partition 2", "err", err)
+				return nil, hap.JsonStatusResourceBusy
 			}
 		case characteristic.SecuritySystemTargetStateNightArm:
 			log.Info("arm night")
 			if err := cli.Arm(toPartition(cfg.NightPartition)); err != nil {
 				log.Error("could not arm partition 2", "err", err)
+				return nil, hap.JsonStatusResourceBusy
 			}
 		case characteristic.SecuritySystemTargetStateDisarm:
 			log.Info("disarm")
 			if err := cli.Disarm(isecnetv2.AllPartitions); err != nil {
 				log.Error("could not disarm", "err", err)
+				return nil, hap.JsonStatusInvalidValueInRequest
 			}
+		default:
+			return nil, hap.JsonStatusResourceDoesNotExist
 		}
+		return nil, hap.JsonStatusSuccess
 	}
 }
 

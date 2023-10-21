@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"net/http"
 
+	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
 	"github.com/caarlos0/homekit-amt8000/isecnetv2"
 )
@@ -74,12 +76,17 @@ func setupBypassZones(
 			Name:         zoneName(cfg, zone, "bypass"),
 			Manufacturer: manufacturer,
 		})
-		a.Switch.On.OnValueRemoteUpdate(func(v bool) {
+		a.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
+			clientLock.Lock()
+			defer clientLock.Unlock()
+			v := value.(bool)
 			log.Info("set zone bypass", "zone", zone, "bypass", v)
 			if err := cli.Bypass(zone, v); err != nil {
 				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)
+				return nil, hap.JsonStatusResourceBusy
 			}
-		})
+			return nil, hap.JsonStatusSuccess
+		}
 		if status.Zones[zone-1].Anulated {
 			a.Switch.On.SetValue(true)
 		}
