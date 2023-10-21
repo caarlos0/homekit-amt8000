@@ -1,5 +1,10 @@
 package isecnetv2
 
+import (
+	"encoding/hex"
+	"fmt"
+)
+
 type Status struct {
 	Model       string
 	Version     string
@@ -42,6 +47,7 @@ func (z Zone) AnyEvent() ZoneEvent {
 	case z.Anulated:
 		return ZoneEventAnulated
 	case z.Tamper:
+		fmt.Println("tamper", z.Number)
 		return ZoneEventTamper
 	case z.ShortCircuit:
 		return ZoneEventShortCircuit
@@ -58,7 +64,10 @@ type Partition struct {
 	Stay   bool
 }
 
-func fromBytes(resp []byte) Status {
+func fromBytes(resp []byte) (Status, error) {
+	if len(resp) < 20 {
+		return Status{}, fmt.Errorf("invalid status:\n%s", hex.Dump(resp))
+	}
 	status := Status{
 		Model:       modelName(resp[0]),
 		Version:     version(resp[1:4]),
@@ -115,5 +124,5 @@ func fromBytes(resp []byte) Status {
 		}
 	}
 
-	return status
+	return status, nil
 }

@@ -115,41 +115,15 @@ func main() {
 				log.Error("could not get status", "err", err)
 				continue
 			}
-			alarm.Info.FirmwareRevision.SetValue(status.Version)
-			alarm.Info.Model.SetValue(status.Model)
 
-			if state := toCurrentState(cfg, status); state >= 0 &&
-				alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
+			if state := toCurrentState(cfg, status); alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
 				err := alarm.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
 				log.Info("set current state", "state", state, "err", err)
 			}
 
-			for i, zone := range cfg.AllowBypassZones {
-				current := status.Zones[zone-1].Anulated
-				if v := bypasses[i].Switch.On.Value(); v == current {
-					continue
-				}
-				bypasses[i].Switch.On.SetValue(current)
-				log.Info("bypass", "zone", zone, "status", current)
-			}
-			for i, zone := range cfg.ContactZones {
-				evt := status.Zones[zone-1].AnyEvent()
-				current := boolToInt(evt != isecnetv2.ZoneEventClean)
-				if v := contacts[i].ContactSensor.ContactSensorState.Value(); v == current {
-					continue
-				}
-				_ = contacts[i].ContactSensor.ContactSensorState.SetValue(current)
-				log.Info("contact", "zone", zone, "status", current, "event", evt)
-			}
-			for i, zone := range cfg.MotionZones {
-				evt := status.Zones[zone-1].AnyEvent()
-				current := evt != isecnetv2.ZoneEventClean
-				if v := motions[i].MotionSensor.MotionDetected.Value(); v == current {
-					continue
-				}
-				motions[i].MotionSensor.MotionDetected.SetValue(current)
-				log.Info("motion", "zone", zone, "status", current, "event", evt)
-			}
+			BypassSwitches(bypasses).Update(cfg, status)
+			ContactSensors(contacts).Update(cfg, status)
+			MotionSensors(motions).Update(cfg, status)
 		}
 	}()
 
