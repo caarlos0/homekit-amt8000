@@ -26,6 +26,8 @@ var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	Prefix:          "homekit",
 })
 
+type clientProvider = func(func(cli *isecnetv2.Client) error) error
+
 const manufacturer = "Intelbras"
 
 type Config struct {
@@ -40,8 +42,6 @@ type Config struct {
 	NightPartition   int      `env:"NIGHT"             envDefault:"2"`
 	ZoneNames        []string `env:"ZONE_NAMES"`
 }
-
-var clientLock sync.Mutex
 
 func main() {
 	var cfg Config
@@ -64,20 +64,30 @@ func main() {
 		),
 	)
 
-	cli, err := isecnetv2.New(cfg.Host, cfg.Port, cfg.Password)
-	if err != nil {
-		log.Fatal("could not init isecnet2 client", "err", err)
-	}
-	defer func() {
-		if err := cli.Close(); err != nil {
-			log.Error("could not close isecnet2 client", "err", err)
-		}
-	}()
+	var clientLock sync.Mutex
+	withCli := func(fn func(cli *isecnetv2.Client) error) error {
+		t := time.Now()
+		clientLock.Lock()
+		defer clientLock.Unlock()
+		log.Infof("got client lock after %s", time.Since(t))
 
-	clientLock.Lock()
-	status, err := cli.Status()
-	clientLock.Unlock()
-	if err != nil {
+		cli, err := isecnetv2.New(cfg.Host, cfg.Port, cfg.Password)
+		if err != nil {
+			return fmt.Errorf("could not init isecnet2 client: %w", err)
+		}
+		defer func() {
+			if err := cli.Close(); err != nil {
+				log.Error("could not close isecnet2 client", "err", err)
+			}
+		}()
+		return fn(cli)
+	}
+
+	var status isecnetv2.Status
+	if err := withCli(func(cli *isecnetv2.Client) (err error) {
+		status, err = cli.Status()
+		return
+	}); err != nil {
 		log.Fatal("could not init accessories", "err", err)
 	}
 
@@ -96,22 +106,20 @@ func main() {
 		log.Info("set target state", "state", state, "err", err)
 	}
 	alarm.SecuritySystem.SecuritySystemTargetState.SetValueRequestFunc = alarmUpdateHandler(
-		cli,
+		withCli,
 		cfg,
 	)
 
-	contacts, motions, bypasses := setupZones(cli, cfg, status)
+	contacts, motions, bypasses := setupZones(withCli, cfg, status)
 
 	go func() {
 		tick := time.NewTicker(time.Second * 3)
 		for range tick.C {
-			if cli == nil {
-				continue
-			}
-			clientLock.Lock()
-			status, err := cli.Status()
-			clientLock.Unlock()
-			if err != nil {
+			var status isecnetv2.Status
+			if err := withCli(func(cli *isecnetv2.Client) (err error) {
+				status, err = cli.Status()
+				return
+			}); err != nil {
 				log.Error("could not get status", "err", err)
 				continue
 			}
@@ -229,34 +237,40 @@ func boolToInt(b bool) int {
 }
 
 func alarmUpdateHandler(
-	cli *isecnetv2.Client,
+	cli clientProvider,
 	cfg Config,
 ) func(value interface{}, request *http.Request) (response interface{}, code int) {
 	return func(v interface{}, _ *http.Request) (response interface{}, code int) {
-		clientLock.Lock()
-		defer clientLock.Unlock()
 		switch v.(int) {
 		case characteristic.SecuritySystemTargetStateStayArm:
 			log.Info("arm stay")
-			if err := cli.Arm(toPartition(cfg.StayPartition)); err != nil {
+			if err := cli(func(cli *isecnetv2.Client) error {
+				return cli.Arm(toPartition(cfg.StayPartition))
+			}); err != nil {
 				log.Error("could not arm", "err", err)
 				return nil, hap.JsonStatusResourceBusy
 			}
 		case characteristic.SecuritySystemTargetStateAwayArm:
 			log.Info("arm away")
-			if err := cli.Arm(toPartition(cfg.AwayPartition)); err != nil {
+			if err := cli(func(cli *isecnetv2.Client) error {
+				return cli.Arm(toPartition(cfg.AwayPartition))
+			}); err != nil {
 				log.Error("could not arm partition 2", "err", err)
 				return nil, hap.JsonStatusResourceBusy
 			}
 		case characteristic.SecuritySystemTargetStateNightArm:
 			log.Info("arm night")
-			if err := cli.Arm(toPartition(cfg.NightPartition)); err != nil {
+			if err := cli(func(cli *isecnetv2.Client) error {
+				return cli.Arm(toPartition(cfg.NightPartition))
+			}); err != nil {
 				log.Error("could not arm partition 2", "err", err)
 				return nil, hap.JsonStatusResourceBusy
 			}
 		case characteristic.SecuritySystemTargetStateDisarm:
 			log.Info("disarm")
-			if err := cli.Disarm(isecnetv2.AllPartitions); err != nil {
+			if err := cli(func(cli *isecnetv2.Client) error {
+				return cli.Disarm(isecnetv2.AllPartitions)
+			}); err != nil {
 				log.Error("could not disarm", "err", err)
 				return nil, hap.JsonStatusInvalidValueInRequest
 			}

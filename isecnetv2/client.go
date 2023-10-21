@@ -1,14 +1,10 @@
 package isecnetv2
 
 import (
-	"context"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"net"
 	"os"
-	"sync"
-	"syscall"
 	"time"
 
 	"github.com/caarlos0/sync/cio"
@@ -63,7 +59,6 @@ func (s State) String() string {
 }
 
 type Client struct {
-	lock sync.Mutex
 	conn net.Conn
 	addr string
 	pass string
@@ -94,9 +89,6 @@ func (c *Client) Panic() error {
 // removing bypass of zone 2:
 // 0000   00 00 00 01 00 04 40 1f 01 00 a4
 func (c *Client) Bypass(zone int, set bool) error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
 	// 0x01 add
 	// 0x00 remove
 	var b byte = 0x00
@@ -106,45 +98,39 @@ func (c *Client) Bypass(zone int, set bool) error {
 
 	payload := createPayload(cmdBypass, []byte{byte(zone - 1), b})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not set bypass=%v %v: %w", set, zone, c.handleClientError(err))
+		return fmt.Errorf("could not set bypass=%v %v: %w", set, zone, err)
 	}
-	return c.recycle()
+	return nil
 }
 
 func (c *Client) TurnOffSiren(partition byte) error {
 	log.Debug("turn off siren")
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	payload := createPayload(cmdTurnOffSiren, []byte{partition})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not turn siren off %v: %w", partition, c.handleClientError(err))
+		return fmt.Errorf("could not turn siren off %v: %w", partition, err)
 	}
-	return c.recycle()
+	return nil
 }
 
 func (c *Client) CleanFirings() error {
 	log.Debug("clean firings")
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	payload := createPayload(cmdCleanFiring, nil)
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not clean firing: %w", c.handleClientError(err))
+		return fmt.Errorf("could not clean firing: %w", err)
 	}
-	return c.recycle()
+	return nil
 }
 
 func (c *Client) Status() (Status, error) {
 	log.Debug("status")
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	payload := createPayload(cmdStatus, nil)
 	if _, err := c.conn.Write(payload); err != nil {
-		return Status{}, fmt.Errorf("could not gather status: %w", c.handleClientError(err))
+		return Status{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
 	resp, err := c.limitTimedRead(len(payload))
 	if err != nil {
-		return Status{}, fmt.Errorf("could not gather status: %w", c.handleClientError(err))
+		return Status{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
 	if len(resp) == 0 {
@@ -153,7 +139,7 @@ func (c *Client) Status() (Status, error) {
 
 	resp2, err := c.limitTimedRead(int(resp[0]))
 	if err != nil {
-		return Status{}, fmt.Errorf("could not gather status: %w", c.handleClientError(err))
+		return Status{}, fmt.Errorf("could not gather status: %w", err)
 	}
 
 	_, reply := parseResponse(append(resp, resp2...))
@@ -162,22 +148,18 @@ func (c *Client) Status() (Status, error) {
 
 func (c *Client) Disarm(partition byte) error {
 	log.Debug("disarm", "partition", partition)
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdDisarm})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not disarm: %w", c.handleClientError(err))
+		return fmt.Errorf("could not disarm: %w", err)
 	}
-	return c.recycle()
+	return nil
 }
 
 func (c *Client) Arm(partition byte) error {
 	log.Debug("arm", "partition", partition)
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	payload := createPayload(cmdArm, []byte{partition, subCmdArm})
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not arm %v: %w", partition, c.handleClientError(err))
+		return fmt.Errorf("could not arm %v: %w", partition, err)
 	}
 	// fail			   00000000  8f ff 00 00 00 03 f0 fd  27 a6                    |........'.|
 	// succ			   00000000  8f ff 00 00 00 04 40 1e  02 91 46                 |......@...F|
@@ -195,10 +177,6 @@ func (c *Client) Arm(partition byte) error {
 		return fmt.Errorf("failed to arm: open zones")
 	}
 
-	if err := c.recycle(); err != nil {
-		return err
-	}
-
 	if resp[0] == 0x40 {
 		return nil
 	}
@@ -206,37 +184,11 @@ func (c *Client) Arm(partition byte) error {
 	return fmt.Errorf("unknown response:\n%s", hex.Dump(resp))
 }
 
-func (c *Client) handleClientError(err error) error {
-	if errors.Is(err, syscall.EPIPE) || errors.Is(err, context.DeadlineExceeded) {
-		if err := c.recycle(); err != nil {
-			return fmt.Errorf(
-				"failed to recycle client: %w",
-				err,
-			)
-		}
-	}
-	return err
-}
-
 func (c *Client) Close() error {
-	c.lock.Lock()
-	defer c.lock.Unlock()
 	if _, err := c.conn.Write(createPayload(cmdDisconnect, nil)); err != nil {
 		return fmt.Errorf("could not disconnect: %w", err)
 	}
 	return c.conn.Close()
-}
-
-func (c *Client) recycle() error {
-	log.Info("recycling client...")
-	time.Sleep(time.Second)
-	if err := c.conn.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
-		return fmt.Errorf("could not recycle client: %w", err)
-	}
-	if err := c.init(); err != nil {
-		return fmt.Errorf("could not recycle client: %w", err)
-	}
-	return nil
 }
 
 func (c *Client) init() error {
@@ -248,12 +200,12 @@ func (c *Client) init() error {
 
 	payload := makeAuthPayload(c.pass)
 	if _, err := c.conn.Write(payload); err != nil {
-		return fmt.Errorf("could not auth: %w", c.handleClientError(err))
+		return fmt.Errorf("could not auth: %w", err)
 	}
 
 	resp, err := c.limitTimedRead(authReplySize(c.pass))
 	if err != nil {
-		return fmt.Errorf("could not auth: %w", c.handleClientError(err))
+		return fmt.Errorf("could not auth: %w", err)
 	}
 
 	return parseAuthResponse(resp)
@@ -263,7 +215,7 @@ func (c *Client) limitTimedRead(n int) ([]byte, error) {
 	buf := make([]byte, n)
 	m, err := cio.TimeoutReader(c.conn, timeout).Read(buf)
 	if err != nil {
-		return nil, c.handleClientError(err)
+		return nil, err
 	}
 	if m != n {
 		return nil, fmt.Errorf("wanted %d bytes, read %d", n, m)

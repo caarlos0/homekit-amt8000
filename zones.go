@@ -10,7 +10,7 @@ import (
 )
 
 func setupZones(
-	cli *isecnetv2.Client,
+	cli clientProvider,
 	cfg Config,
 	status isecnetv2.Status,
 ) ([]*ContactSensor, []*MotionSensor, []*accessory.Switch) {
@@ -65,7 +65,7 @@ func setupContactZones(
 }
 
 func setupBypassZones(
-	cli *isecnetv2.Client,
+	cli clientProvider,
 	cfg Config,
 	status isecnetv2.Status,
 ) []*accessory.Switch {
@@ -77,11 +77,11 @@ func setupBypassZones(
 			Manufacturer: manufacturer,
 		})
 		a.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
-			clientLock.Lock()
-			defer clientLock.Unlock()
 			v := value.(bool)
 			log.Info("set zone bypass", "zone", zone, "bypass", v)
-			if err := cli.Bypass(zone, v); err != nil {
+			if err := cli(func(cli *isecnetv2.Client) error {
+				return cli.Bypass(zone, v)
+			}); err != nil {
 				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)
 				return nil, hap.JsonStatusResourceBusy
 			}
