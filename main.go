@@ -133,20 +133,22 @@ func main() {
 				log.Info("bypass", "zone", zone, "status", current)
 			}
 			for i, zone := range cfg.ContactZones {
-				current := boolToInt(status.Zones[zone-1].Open)
+				evt := status.Zones[zone-1].AnyEvent()
+				current := boolToInt(evt != isecnetv2.ZoneEventClean)
 				if v := contacts[i].ContactSensor.ContactSensorState.Value(); v == current {
 					continue
 				}
 				_ = contacts[i].ContactSensor.ContactSensorState.SetValue(current)
-				log.Info("contact", "zone", zone, "status", current)
+				log.Info("contact", "zone", zone, "status", current, "event", evt)
 			}
 			for i, zone := range cfg.MotionZones {
-				current := status.Zones[zone-1].Open
+				evt := status.Zones[zone-1].AnyEvent()
+				current := evt != isecnetv2.ZoneEventClean
 				if v := motions[i].MotionSensor.MotionDetected.Value(); v == current {
 					continue
 				}
 				motions[i].MotionSensor.MotionDetected.SetValue(current)
-				log.Info("motion", "zone", zone, "status", current)
+				log.Info("motion", "zone", zone, "status", current, "event", evt)
 			}
 		}
 	}()

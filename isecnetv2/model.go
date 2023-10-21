@@ -21,6 +21,35 @@ type Zone struct {
 	ShortCircuit bool
 }
 
+type ZoneEvent uint
+
+const (
+	ZoneEventClean ZoneEvent = iota
+	ZoneEventOpen
+	ZoneEventViolated
+	ZoneEventAnulated
+	ZoneEventLowBattery
+	ZoneEventTamper
+	ZoneEventShortCircuit
+)
+
+func (z Zone) AnyEvent() ZoneEvent {
+	switch {
+	case z.Open:
+		return ZoneEventOpen
+	case z.Violated:
+		return ZoneEventViolated
+	case z.Anulated:
+		return ZoneEventAnulated
+	case z.Tamper:
+		return ZoneEventTamper
+	case z.ShortCircuit:
+		return ZoneEventShortCircuit
+	default:
+		return ZoneEventClean
+	}
+}
+
 type Partition struct {
 	Number int
 	Armed  bool
