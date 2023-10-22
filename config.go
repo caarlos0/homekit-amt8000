@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/brutella/hap/characteristic"
 	"github.com/caarlos0/homekit-amt8000/isecnetv2"
@@ -9,16 +10,15 @@ import (
 )
 
 type Config struct {
-	Host             string   `env:"HOST,required"`
-	Port             string   `env:"PORT"              envDefault:"9009"`
-	Password         string   `env:"PASSWORD,required"`
-	MotionZones      []int    `env:"MOTION"`
-	ContactZones     []int    `env:"CONTACT"`
-	AllowBypassZones []int    `env:"ALLOW_BYPASS"`
-	AwayPartitions   []int    `env:"AWAY"              envDefault:"0"` // 0xff
-	StayPartitions   []int    `env:"STAY"              envDefault:"2"`
-	NightPartitions  []int    `env:"NIGHT"             envDefault:"2,3"`
-	ZoneNames        []string `env:"ZONE_NAMES"`
+	Host            string   `env:"HOST,required"`
+	Port            string   `env:"PORT"              envDefault:"9009"`
+	Password        string   `env:"PASSWORD,required"`
+	MotionZones     []int    `env:"MOTION"`
+	ContactZones    []int    `env:"CONTACT"`
+	AwayPartitions  []int    `env:"AWAY,required"` // 0xff
+	StayPartitions  []int    `env:"STAY,required"`
+	NightPartitions []int    `env:"NIGHT,required"`
+	ZoneNames       []string `env:"ZONE_NAMES"`
 }
 
 type zoneKind uint8
@@ -27,6 +27,15 @@ const (
 	kindMotion = iota + 1
 	kindContact
 )
+
+func (z zoneKind) String() string {
+	switch z {
+	case kindMotion:
+		return "motion"
+	default:
+		return "contact"
+	}
+}
 
 type zoneConfig struct {
 	number int
@@ -42,6 +51,19 @@ func (c Config) zoneName(n int) string {
 		}
 	}
 	return fmt.Sprintf("Zone %d", n)
+}
+
+type allZoneConfigs []zoneConfig
+
+func (a allZoneConfigs) String() string {
+	var zones []string
+	for _, zone := range a {
+		zones = append(
+			zones,
+			fmt.Sprintf("zone %d: %q (%s)", zone.number, zone.name, zone.kind.String()),
+		)
+	}
+	return strings.Join(zones, "\n")
 }
 
 func (c Config) allZones() []zoneConfig {

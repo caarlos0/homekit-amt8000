@@ -6,19 +6,6 @@ import (
 	"github.com/caarlos0/homekit-amt8000/isecnetv2"
 )
 
-type BypassSwitches []*accessory.Switch
-
-func (bypasses BypassSwitches) Update(cfg Config, status isecnetv2.Status) {
-	for i, zone := range cfg.AllowBypassZones {
-		current := status.Zones[zone-1].Anulated
-		if v := bypasses[i].Switch.On.Value(); v == current {
-			continue
-		}
-		bypasses[i].Switch.On.SetValue(current)
-		log.Info("bypass", "zone", zone, "status", current)
-	}
-}
-
 type ContactSensors []*ContactSensor
 
 func (contacts ContactSensors) Update(cfg Config, status isecnetv2.Status) {

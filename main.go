@@ -38,17 +38,13 @@ func main() {
 
 	log.Info(
 		"loading accessories",
-		"configuration", strings.Join([]string{
-			fmt.Sprintf("stay partition %d", cfg.StayPartitions),
-			fmt.Sprintf("away_partition %d", cfg.AwayPartitions),
-			fmt.Sprintf("night_partition %d", cfg.NightPartitions),
-			fmt.Sprintf("motion sensors zones %v", cfg.MotionZones),
-			fmt.Sprintf("contact sensors zones %v", cfg.ContactZones),
-			fmt.Sprintf("zones with bypass %v", cfg.AllowBypassZones),
-			fmt.Sprintf("zone names %v", cfg.ZoneNames),
-		},
-			"\n",
-		),
+		"partitions",
+		strings.Join([]string{
+			fmt.Sprintf("stay: %v", cfg.StayPartitions),
+			fmt.Sprintf("away: %v", cfg.AwayPartitions),
+			fmt.Sprintf("night: %v", cfg.NightPartitions),
+		}, "\n"),
+		"zones", allZoneConfigs(cfg.allZones()).String(),
 	)
 
 	var clientLock sync.Mutex

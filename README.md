@@ -66,7 +66,25 @@ AWAY="0"
 > - Home arms the `$STAY` partitions
 >
 > Rationale for what to do in each of them can be found
-> [here](https://www.commandone.com/what-is-the-difference-between-stay-away-and-night-home-alarm-activation-modes/).
+> [here](https://www.commandone.com/what-is-the-difference-between-stay-away-and-night-home-alarm-activation-modes/),
+> but basically you'll want to arm all partitions on **away**, and a subset of
+> partitions on **night** and **stay**, depending on your use case.
+>
+> For me, I created 3 partitions:
+>
+> 1. Inside motion sensors
+> 2. Outside motion sensors
+> 3. Access sensors and doors
+>
+> And I set it up like so:
+>
+> ```sh
+> AWAY=0
+> STAY=2
+> NIGHT=2,3
+> ```
+>
+> But, you do you. 😄
 
 ## Running
 
