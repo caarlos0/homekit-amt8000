@@ -23,7 +23,7 @@ func setupZones(
 			v := value.(bool)
 			log.Info("set zone bypass", "zone", zone, "bypass", v)
 			if err := cli(func(cli *isecnetv2.Client) error {
-				return cli.Bypass(zone.number, v)
+				return cli.Bypass(zone.number, !v)
 			}); err != nil {
 				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)
 				return nil, hap.JsonStatusResourceBusy
@@ -41,7 +41,7 @@ func setupZones(
 				a.Motion.MotionDetected.SetValue(true)
 			}
 
-			a.Bypass.On.SetValue(bypassing)
+			a.Bypass.On.SetValue(!bypassing)
 			a.Bypass.On.SetValueRequestFunc = bypassFn
 			motions = append(motions, a)
 		case kindContact:
@@ -52,7 +52,7 @@ func setupZones(
 			if status.Zones[zone.number].Open {
 				_ = a.Contact.ContactSensorState.SetValue(1)
 			}
-			a.Bypass.On.SetValue(bypassing)
+			a.Bypass.On.SetValue(!bypassing)
 			a.Bypass.On.SetValueRequestFunc = bypassFn
 			contacts = append(contacts, a)
 		}
