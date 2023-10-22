@@ -30,19 +30,6 @@ type clientProvider = func(func(cli *isecnetv2.Client) error) error
 
 const manufacturer = "Intelbras"
 
-type Config struct {
-	Host             string   `env:"HOST,required"`
-	Port             string   `env:"PORT"              envDefault:"9009"`
-	Password         string   `env:"PASSWORD,required"`
-	MotionZones      []int    `env:"MOTION"`
-	ContactZones     []int    `env:"CONTACT"`
-	AllowBypassZones []int    `env:"ALLOW_BYPASS"`
-	StayPartition    int      `env:"STAY"              envDefault:"1"`
-	AwayPartition    int      `env:"AWAY"              envDefault:"0"`
-	NightPartition   int      `env:"NIGHT"             envDefault:"2"`
-	ZoneNames        []string `env:"ZONE_NAMES"`
-}
-
 func main() {
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
@@ -110,7 +97,7 @@ func main() {
 		cfg,
 	)
 
-	contacts, motions, bypasses := setupZones(withCli, cfg, status)
+	contacts, motions := setupZones(withCli, cfg, status)
 
 	panicBtn := accessory.NewSwitch(accessory.Info{
 		Name:         "Trigger panic",
@@ -148,7 +135,6 @@ func main() {
 				log.Info("set current state", "state", state, "err", err)
 			}
 
-			BypassSwitches(bypasses).Update(cfg, status)
 			ContactSensors(contacts).Update(cfg, status)
 			MotionSensors(motions).Update(cfg, status)
 			panicBtn.Switch.On.SetValue(status.Siren)
@@ -160,7 +146,7 @@ func main() {
 	server, err := hap.NewServer(
 		fs,
 		bridge.A,
-		securityAccessories(alarm, contacts, motions, bypasses, panicBtn)...,
+		securityAccessories(alarm, contacts, motions, panicBtn)...,
 	)
 	if err != nil {
 		log.Fatal("fail to start server", "error", err)
@@ -228,7 +214,6 @@ func securityAccessories(
 	alarm *accessory.SecuritySystem,
 	contacts []*ContactSensor,
 	motions []*MotionSensor,
-	bypasses []*accessory.Switch,
 	panicBtn *accessory.Switch,
 ) []*accessory.A {
 	result := []*accessory.A{alarm.A}
@@ -236,9 +221,6 @@ func securityAccessories(
 		result = append(result, c.A)
 	}
 	for _, m := range motions {
-		result = append(result, m.A)
-	}
-	for _, m := range bypasses {
 		result = append(result, m.A)
 	}
 	result = append(result, panicBtn.A)

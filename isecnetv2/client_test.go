@@ -9,15 +9,10 @@ import (
 func TestIsec(t *testing.T) {
 	cli, err := New("192.168.1.111", "9009", "307924")
 	require.NoError(t, err)
-	require.NoError(t, cli.Panic())
-	require.NoError(t, cli.Close())
+	t.Cleanup(func() {
+		cli.Close()
+	})
 
-	cli, err = New("192.168.1.111", "9009", "307924")
-	require.NoError(t, err)
-	require.NoError(t, cli.Disarm(AllPartitions))
-	require.NoError(t, cli.Close())
-
-	// require.NoError(t, cli.Bypass(1, false))
 	status, err := cli.Status()
 	require.NoError(t, err)
 

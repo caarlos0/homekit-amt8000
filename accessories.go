@@ -25,10 +25,10 @@ func (contacts ContactSensors) Update(cfg Config, status isecnetv2.Status) {
 	for i, zone := range cfg.ContactZones {
 		evt := status.Zones[zone-1].AnyEvent()
 		current := boolToInt(evt != isecnetv2.ZoneEventClean)
-		if v := contacts[i].ContactSensor.ContactSensorState.Value(); v == current {
+		if v := contacts[i].Contact.ContactSensorState.Value(); v == current {
 			continue
 		}
-		_ = contacts[i].ContactSensor.ContactSensorState.SetValue(current)
+		_ = contacts[i].Contact.ContactSensorState.SetValue(current)
 		log.Info("contact", "zone", zone, "status", current, "event", evt)
 	}
 }
@@ -39,40 +39,48 @@ func (motions MotionSensors) Update(cfg Config, status isecnetv2.Status) {
 	for i, zone := range cfg.MotionZones {
 		evt := status.Zones[zone-1].AnyEvent()
 		current := evt != isecnetv2.ZoneEventClean
-		if v := motions[i].MotionSensor.MotionDetected.Value(); v == current {
+		if v := motions[i].Motion.MotionDetected.Value(); v == current {
 			continue
 		}
-		motions[i].MotionSensor.MotionDetected.SetValue(current)
+		motions[i].Motion.MotionDetected.SetValue(current)
 		log.Info("motion", "zone", zone, "status", current, "event", evt)
 	}
 }
 
 type ContactSensor struct {
 	*accessory.A
-	ContactSensor *service.ContactSensor
+	Contact *service.ContactSensor
+	Bypass  *service.Switch
 }
 
 func newContactSensor(info accessory.Info) *ContactSensor {
 	a := ContactSensor{}
 	a.A = accessory.New(info, accessory.TypeSensor)
 
-	a.ContactSensor = service.NewContactSensor()
-	a.AddS(a.ContactSensor.S)
+	a.Contact = service.NewContactSensor()
+	a.AddS(a.Contact.S)
+
+	a.Bypass = service.NewSwitch()
+	a.AddS(a.Bypass.S)
 
 	return &a
 }
 
 type MotionSensor struct {
 	*accessory.A
-	MotionSensor *service.MotionSensor
+	Motion *service.MotionSensor
+	Bypass *service.Switch
 }
 
 func newMotionSensor(info accessory.Info) *MotionSensor {
 	a := MotionSensor{}
 	a.A = accessory.New(info, accessory.TypeSensor)
 
-	a.MotionSensor = service.NewMotionSensor()
-	a.AddS(a.MotionSensor.S)
+	a.Motion = service.NewMotionSensor()
+	a.AddS(a.Motion.S)
+
+	a.Bypass = service.NewSwitch()
+	a.AddS(a.Bypass.S)
 
 	return &a
 }

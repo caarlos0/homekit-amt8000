@@ -28,6 +28,10 @@ MOTION="1,2,3"
 # Zones that are contact sensors (i.e. doors).
 CONTACT="4,5,6"
 
+# Indexed zone names.
+# default: [Zone 1, Zone 2, ...]
+ZONE_NAMES="Kitchen door,Living Room Window"
+
 # Partition to arm when set stay mode.
 # default: 1
 STAY="1"
@@ -39,14 +43,17 @@ NIGHT="2"
 # Partition to arm when set to away mode.
 # default: 0 (all partitions)
 AWAY="0"
-
-# Indexed zone names.
-# default: [Zone 1, Zone 2, ...]
-ZONE_NAMES="Kitchen door,Living Room Window"
-
-# Zones that allow bypass.
-ALLOW_BYPASS="1,2,3,4"
 ```
+
+> _Warning_
+> the away mode of the homekit bridge does not translate to the per-manual
+> stay mode in the Intelbras alarm system, mainly because it is supper confusing.
+> Instead, the alarm system here has 4 states:
+>
+> - Off
+> - Night (which will arm the `$NIGHT` partition per configuration)
+> - Away (which will arm the `$AWAY` partition per configuration)
+> - Home (which will arm the `$STAY` partition per configuration)
 
 ## Running
 

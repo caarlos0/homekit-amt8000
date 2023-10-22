@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/brutella/hap"
@@ -13,84 +12,50 @@ func setupZones(
 	cli clientProvider,
 	cfg Config,
 	status isecnetv2.Status,
-) ([]*ContactSensor, []*MotionSensor, []*accessory.Switch) {
-	return setupContactZones(cfg, status),
-		setupMotionZones(cfg, status),
-		setupBypassZones(cli, cfg, status)
-}
-
-func zoneName(cfg Config, n int, s string) string {
-	names := cfg.ZoneNames
-	if len(names) > n-1 {
-		return fmt.Sprintf("%s %s", names[n-1], s)
-	}
-	return fmt.Sprintf("Zone %d %s", n, s)
-}
-
-func setupMotionZones(
-	cfg Config,
-	status isecnetv2.Status,
-) []*MotionSensor {
-	motions := make([]*MotionSensor, len(cfg.MotionZones))
-	for i, zone := range cfg.MotionZones {
-		a := newMotionSensor(accessory.Info{
-			Name:         zoneName(cfg, zone, "sensor"),
-			Manufacturer: manufacturer,
-		})
-		if status.Zones[zone-1].Open {
-			a.MotionSensor.MotionDetected.SetValue(true)
-		}
-		motions[i] = a
-	}
-	return motions
-}
-
-func setupContactZones(
-	cfg Config,
-	status isecnetv2.Status,
-) []*ContactSensor {
-	contacts := make([]*ContactSensor, len(cfg.ContactZones))
-	for i, zone := range cfg.ContactZones {
-		a := newContactSensor(accessory.Info{
-			Name:         zoneName(cfg, zone, "sensor"),
-			Manufacturer: manufacturer,
-		})
-		if status.Zones[zone-1].Open {
-			_ = a.ContactSensor.ContactSensorState.SetValue(1)
-		}
-		contacts[i] = a
-	}
-
-	return contacts
-}
-
-func setupBypassZones(
-	cli clientProvider,
-	cfg Config,
-	status isecnetv2.Status,
-) []*accessory.Switch {
-	bypasses := make([]*accessory.Switch, len(cfg.AllowBypassZones))
-	for i, zone := range cfg.AllowBypassZones {
+) ([]*ContactSensor, []*MotionSensor) {
+	var contacts []*ContactSensor
+	var motions []*MotionSensor
+	for _, zone := range cfg.allZones() {
 		zone := zone
-		a := accessory.NewSwitch(accessory.Info{
-			Name:         zoneName(cfg, zone, "bypass"),
-			Manufacturer: manufacturer,
-		})
-		a.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
+
+		bypassing := status.Zones[zone.number].Anulated
+		bypassFn := func(value interface{}, _ *http.Request) (response interface{}, code int) {
 			v := value.(bool)
 			log.Info("set zone bypass", "zone", zone, "bypass", v)
 			if err := cli(func(cli *isecnetv2.Client) error {
-				return cli.Bypass(zone, v)
+				return cli.Bypass(zone.number, v)
 			}); err != nil {
 				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)
 				return nil, hap.JsonStatusResourceBusy
 			}
 			return nil, hap.JsonStatusSuccess
 		}
-		if status.Zones[zone-1].Anulated {
-			a.Switch.On.SetValue(true)
+
+		switch zone.kind {
+		case kindMotion:
+			a := newMotionSensor(accessory.Info{
+				Name:         zone.name,
+				Manufacturer: manufacturer,
+			})
+			if status.Zones[zone.number].Open {
+				a.Motion.MotionDetected.SetValue(true)
+			}
+
+			a.Bypass.On.SetValue(bypassing)
+			a.Bypass.On.SetValueRequestFunc = bypassFn
+			motions = append(motions, a)
+		case kindContact:
+			a := newContactSensor(accessory.Info{
+				Name:         zone.name,
+				Manufacturer: manufacturer,
+			})
+			if status.Zones[zone.number].Open {
+				_ = a.Contact.ContactSensorState.SetValue(1)
+			}
+			a.Bypass.On.SetValue(bypassing)
+			a.Bypass.On.SetValueRequestFunc = bypassFn
+			contacts = append(contacts, a)
 		}
-		bypasses[i] = a
 	}
-	return bypasses
+	return contacts, motions
 }
