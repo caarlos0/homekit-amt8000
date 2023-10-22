@@ -3,6 +3,16 @@
 This projects creates a homekit bridge and accessories for the Intelbras AMT8000
 alarm system.
 
+###### Security System + Panic button
+
+![CleanShot 2023-10-22 at 20 31 56@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/57fe0b21-9020-4208-97e9-adbbd3e9170f)
+
+![CleanShot 2023-10-22 at 20 32 35@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/b08d928d-1e9d-4d99-a0be-33483732240a)
+
+###### Zones (motion and contact) + Bypass switches
+
+![CleanShot 2023-10-22 at 20 38 30@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/67edc61d-f0a6-4b13-91fc-9cfc3fcc63da)
+
 ## Configuration
 
 This project is set up using environment variables.
