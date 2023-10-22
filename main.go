@@ -135,22 +135,17 @@ func main() {
 		}
 	}()
 
-	// Store the data in the "./db" directory.
 	fs := hap.NewFsStore("./db")
 
-	// Create the hap server.
 	server, err := hap.NewServer(
 		fs,
 		bridge.A,
 		securityAccessories(alarm, contacts, motions, bypasses)...,
 	)
 	if err != nil {
-		// stop if an error happens
-		log.Fatal("fail", "error", err)
+		log.Fatal("fail to start server", "error", err)
 	}
 
-	// Setup a listener for interrupts and SIGTERM signals
-	// to stop the server.
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 	signal.Notify(c, syscall.SIGTERM)
@@ -163,7 +158,6 @@ func main() {
 		cancel()
 	}()
 
-	// Run the server.
 	log.Info("starting server...")
 	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("failed to close server", "err", err)
