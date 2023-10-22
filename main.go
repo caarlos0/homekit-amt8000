@@ -39,9 +39,9 @@ func main() {
 	log.Info(
 		"loading accessories",
 		"configuration", strings.Join([]string{
-			fmt.Sprintf("stay partition %d", cfg.StayPartition),
-			fmt.Sprintf("away_partition %d", cfg.AwayPartition),
-			fmt.Sprintf("night_partition %d", cfg.NightPartition),
+			fmt.Sprintf("stay partition %d", cfg.StayPartitions),
+			fmt.Sprintf("away_partition %d", cfg.AwayPartitions),
+			fmt.Sprintf("night_partition %d", cfg.NightPartitions),
 			fmt.Sprintf("motion sensors zones %v", cfg.MotionZones),
 			fmt.Sprintf("contact sensors zones %v", cfg.ContactZones),
 			fmt.Sprintf("zones with bypass %v", cfg.AllowBypassZones),
@@ -88,7 +88,7 @@ func main() {
 		Model:        status.Model,
 		Firmware:     status.Version,
 	})
-	if state := toCurrentState(cfg, status); state >= 0 {
+	if state := cfg.getAlarmState(status); state >= 0 {
 		err := alarm.SecuritySystem.SecuritySystemTargetState.SetValue(state)
 		log.Info("set target state", "state", state, "err", err)
 	}
@@ -130,7 +130,7 @@ func main() {
 				continue
 			}
 
-			if state := toCurrentState(cfg, status); alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
+			if state := cfg.getAlarmState(status); alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
 				err := alarm.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
 				log.Info("set current state", "state", state, "err", err)
 			}
@@ -170,46 +170,6 @@ func main() {
 	}
 }
 
-func toCurrentState(cfg Config, status isecnetv2.Status) int {
-	if status.Siren {
-		log.Debug("set: firing")
-		return characteristic.SecuritySystemCurrentStateAlarmTriggered
-	}
-
-	switch status.State {
-	case isecnetv2.StatePartial, isecnetv2.StateArmed:
-		for _, part := range status.Partitions {
-			log.Debug("partition armed", "part", part.Number, "armed", part.Armed)
-			if !part.Armed {
-				continue
-			}
-			switch part.Number {
-			case cfg.NightPartition:
-				log.Debug("set: night arm")
-				return characteristic.SecuritySystemCurrentStateNightArm
-			case cfg.AwayPartition:
-				log.Debug("set: away arm")
-				return characteristic.SecuritySystemCurrentStateAwayArm
-			case cfg.StayPartition:
-				log.Debug("set: stay arm")
-				return characteristic.SecuritySystemCurrentStateStayArm
-			default:
-				log.Warn(
-					"partition is armed, but its not configured for any state",
-					"partition",
-					part.Number,
-				)
-			}
-		}
-
-		log.Debug("set: none")
-		return -1
-	default:
-		log.Debug("set: disarm")
-		return characteristic.SecuritySystemCurrentStateDisarmed
-	}
-}
-
 func securityAccessories(
 	alarm *accessory.SecuritySystem,
 	contacts []*ContactSensor,
@@ -241,28 +201,34 @@ func alarmUpdateHandler(
 	return func(v interface{}, _ *http.Request) (response interface{}, code int) {
 		switch v.(int) {
 		case characteristic.SecuritySystemTargetStateStayArm:
-			log.Info("arm stay")
-			if err := cli(func(cli *isecnetv2.Client) error {
-				return cli.Arm(toPartition(cfg.StayPartition))
-			}); err != nil {
-				log.Error("could not arm", "err", err)
-				return nil, hap.JsonStatusResourceBusy
+			for _, part := range cfg.StayPartitions {
+				log.Info("arm stay", "partition", part)
+				if err := cli(func(cli *isecnetv2.Client) error {
+					return cli.Arm(toPartition(part))
+				}); err != nil {
+					log.Error("could not arm", "err", err)
+					return nil, hap.JsonStatusResourceBusy
+				}
 			}
 		case characteristic.SecuritySystemTargetStateAwayArm:
-			log.Info("arm away")
-			if err := cli(func(cli *isecnetv2.Client) error {
-				return cli.Arm(toPartition(cfg.AwayPartition))
-			}); err != nil {
-				log.Error("could not arm partition 2", "err", err)
-				return nil, hap.JsonStatusResourceBusy
+			for _, part := range cfg.AwayPartitions {
+				log.Info("arm away", "partition", part)
+				if err := cli(func(cli *isecnetv2.Client) error {
+					return cli.Arm(toPartition(part))
+				}); err != nil {
+					log.Error("could not arm partition 2", "err", err)
+					return nil, hap.JsonStatusResourceBusy
+				}
 			}
 		case characteristic.SecuritySystemTargetStateNightArm:
-			log.Info("arm night")
-			if err := cli(func(cli *isecnetv2.Client) error {
-				return cli.Arm(toPartition(cfg.NightPartition))
-			}); err != nil {
-				log.Error("could not arm partition 2", "err", err)
-				return nil, hap.JsonStatusResourceBusy
+			for _, part := range cfg.NightPartitions {
+				log.Info("arm night", "partition", part)
+				if err := cli(func(cli *isecnetv2.Client) error {
+					return cli.Arm(toPartition(part))
+				}); err != nil {
+					log.Error("could not arm partition 2", "err", err)
+					return nil, hap.JsonStatusResourceBusy
+				}
 			}
 		case characteristic.SecuritySystemTargetStateDisarm:
 			log.Info("disarm")

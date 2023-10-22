@@ -32,15 +32,15 @@ CONTACT="4,5,6"
 # default: [Zone 1, Zone 2, ...]
 ZONE_NAMES="Kitchen door,Living Room Window"
 
-# Partition to arm when set stay mode.
+# Partitions to arm when set stay mode.
 # default: 1
-STAY="1"
+STAY="1,2"
 
-# Partition to arm when set to night mode.
+# Partitions to arm when set to night mode.
 # default: 2
-NIGHT="2"
+NIGHT="2,3"
 
-# Partition to arm when set to away mode.
+# Partitions to arm when set to away mode.
 # default: 0 (all partitions)
 AWAY="0"
 ```
@@ -51,9 +51,12 @@ AWAY="0"
 > Instead, the alarm system here has 4 states:
 >
 > - Off
-> - Night (which will arm the `$NIGHT` partition per configuration)
-> - Away (which will arm the `$AWAY` partition per configuration)
-> - Home (which will arm the `$STAY` partition per configuration)
+> - Night: arms the `$NIGHT` partitions
+> - Away arms the `$AWAY` partitions
+> - Home arms the `$STAY` partitions
+>
+> Rationale for what to do in each of them can be found
+> [here](https://www.commandone.com/what-is-the-difference-between-stay-away-and-night-home-alarm-activation-modes/).
 
 ## Running
 
@@ -71,6 +74,7 @@ Setup code is `001 02 003`.
 
 - [x] panic switch
 - [x] bypass zones (?)
+- [x] multiple partitions per state
 - [ ] show zones firing
 - [ ] show partitions firing
 - [ ] battery statuses
