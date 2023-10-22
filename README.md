@@ -55,7 +55,7 @@ NIGHT="2,3"
 AWAY="0"
 ```
 
-> _Warning_
+> **Warning**
 > the away mode of the homekit bridge does not translate to the per-manual
 > stay mode in the Intelbras alarm system, mainly because it is supper confusing.
 > Instead, the alarm system here has 4 states:
