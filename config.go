@@ -35,7 +35,9 @@ type zoneConfig struct {
 func (c Config) zoneName(n int) string {
 	names := c.ZoneNames
 	if len(names) > n-1 {
-		return names[n-1]
+		if n := names[n-1]; n != "" {
+			return n
+		}
 	}
 	return fmt.Sprintf("Zone %d", n)
 }
