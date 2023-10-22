@@ -69,7 +69,7 @@ func main() {
 		t := time.Now()
 		clientLock.Lock()
 		defer clientLock.Unlock()
-		log.Infof("got client lock after %s", time.Since(t))
+		log.Debugf("got client lock after %s", time.Since(t))
 
 		cli, err := isecnetv2.New(cfg.Host, cfg.Port, cfg.Password)
 		if err != nil {
@@ -112,6 +112,25 @@ func main() {
 
 	contacts, motions, bypasses := setupZones(withCli, cfg, status)
 
+	panicBtn := accessory.NewSwitch(accessory.Info{
+		Name:         "Trigger panic",
+		Manufacturer: manufacturer,
+	})
+	panicBtn.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
+		v := value.(bool)
+		if err := withCli(func(cli *isecnetv2.Client) error {
+			if v {
+				log.Warn("triggering a panic!")
+				return cli.Panic()
+			}
+			return cli.Disarm(isecnetv2.AllPartitions)
+		}); err != nil {
+			log.Error("failed to trigger panic", "err", err)
+			return nil, hap.JsonStatusResourceBusy
+		}
+		return nil, hap.JsonStatusSuccess
+	}
+
 	go func() {
 		tick := time.NewTicker(time.Second * 3)
 		for range tick.C {
@@ -132,6 +151,7 @@ func main() {
 			BypassSwitches(bypasses).Update(cfg, status)
 			ContactSensors(contacts).Update(cfg, status)
 			MotionSensors(motions).Update(cfg, status)
+			panicBtn.Switch.On.SetValue(status.Siren)
 		}
 	}()
 
@@ -140,7 +160,7 @@ func main() {
 	server, err := hap.NewServer(
 		fs,
 		bridge.A,
-		securityAccessories(alarm, contacts, motions, bypasses)...,
+		securityAccessories(alarm, contacts, motions, bypasses, panicBtn)...,
 	)
 	if err != nil {
 		log.Fatal("fail to start server", "error", err)
@@ -209,6 +229,7 @@ func securityAccessories(
 	contacts []*ContactSensor,
 	motions []*MotionSensor,
 	bypasses []*accessory.Switch,
+	panicBtn *accessory.Switch,
 ) []*accessory.A {
 	result := []*accessory.A{alarm.A}
 	for _, c := range contacts {
@@ -220,6 +241,7 @@ func securityAccessories(
 	for _, m := range bypasses {
 		result = append(result, m.A)
 	}
+	result = append(result, panicBtn.A)
 	return result
 }
 

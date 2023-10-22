@@ -25,6 +25,7 @@ const (
 	cmdAuth         = 0xf0f0
 	cmdDisconnect   = 0xf0f1
 	cmdStatus       = 0x0b4a
+	cmdPanic        = 0x401a
 	cmdArm          = 0x401e
 	cmdTurnOffSiren = 0x4019
 	cmdCleanFiring  = 0x4013
@@ -73,7 +74,10 @@ func New(host, port, pass string) (*Client, error) {
 }
 
 func (c *Client) Panic() error {
-	// TODO: impl
+	payload := createPayload(cmdPanic, []byte{0x02, 0xa5})
+	if _, err := c.conn.Write(payload); err != nil {
+		return fmt.Errorf("could not panic: %w", err)
+	}
 	return nil
 }
 

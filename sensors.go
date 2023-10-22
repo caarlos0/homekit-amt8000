@@ -76,3 +76,18 @@ func newMotionSensor(info accessory.Info) *MotionSensor {
 
 	return &a
 }
+
+type PanicButton struct {
+	*accessory.A
+	Switch *service.Switch
+}
+
+func NewPanicButoon(info accessory.Info) *PanicButton {
+	a := PanicButton{}
+	a.A = accessory.New(info, accessory.TypeSensor)
+
+	a.Switch = service.NewSwitch()
+	a.AddS(a.Switch.S)
+
+	return &a
+}

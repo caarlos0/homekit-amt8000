@@ -10,11 +10,11 @@ This project is set up using environment variables.
 Full list of them and what they are for:
 
 ```sh
-# Central IP addr.
+# Alarm IP addr.
 # required.
 HOST=192.168.207.4
 
-# Central password.
+# Alarm password.
 # required.
 PASSWORD=123456
 
@@ -62,10 +62,12 @@ Setup code is `001 02 003`.
 
 ## TODO
 
-- [ ] panic switch
+- [x] panic switch
 - [x] bypass zones (?)
 - [ ] show zones firing
 - [ ] show partitions firing
+- [ ] battery statuses
+- [ ] read alarm mac addr
 
 ## License
 
