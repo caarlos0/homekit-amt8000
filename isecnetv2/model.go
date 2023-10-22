@@ -21,9 +21,6 @@ type Zone struct {
 	Open     bool
 	Violated bool
 	Anulated bool
-	// LowBattery   bool
-	// Tamper       bool
-	// ShortCircuit bool
 }
 
 type ZoneEvent uint
@@ -33,9 +30,6 @@ const (
 	ZoneEventOpen
 	ZoneEventViolated
 	ZoneEventAnulated
-	// ZoneEventLowBattery
-	// ZoneEventTamper
-	// ZoneEventShortCircuit
 )
 
 func (z Zone) AnyEvent() ZoneEvent {
@@ -46,10 +40,6 @@ func (z Zone) AnyEvent() ZoneEvent {
 		return ZoneEventViolated
 	case z.Anulated:
 		return ZoneEventAnulated
-	// case z.Tamper:
-	// 	return ZoneEventTamper
-	// case z.ShortCircuit:
-	// 	return ZoneEventShortCircuit
 	default:
 		return ZoneEventClean
 	}
