@@ -79,7 +79,7 @@ func TestGetAlarmState(t *testing.T) {
 	t.Run("away", func(t *testing.T) {
 		require.Equal(
 			t,
-			characteristic.SecuritySystemCurrentStateNightArm,
+			characteristic.SecuritySystemCurrentStateAwayArm,
 			cfg.getAlarmState(client.Status{
 				State: client.StateArmed,
 				Partitions: []client.Partition{
