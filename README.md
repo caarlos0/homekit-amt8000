@@ -5,13 +5,20 @@ alarm system.
 
 ###### Security System + Panic button
 
-![CleanShot 2023-10-22 at 20 31 56@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/57fe0b21-9020-4208-97e9-adbbd3e9170f)
+![CleanShot 2023-10-22 at 23 17 51@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/9413ad39-24d7-43be-b2a5-e602453a2084)
 
-![CleanShot 2023-10-22 at 20 32 35@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/b08d928d-1e9d-4d99-a0be-33483732240a)
+![CleanShot 2023-10-22 at 23 18 04@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/de9222ce-0fac-4640-921a-bd55796ed311)
+
+![CleanShot 2023-10-22 at 23 18 16@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/304b1428-ddd2-4f4a-896e-c648e3388e12)
+
 
 ###### Zones (motion and contact) + Bypass switches
 
-![CleanShot 2023-10-22 at 20 38 30@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/67edc61d-f0a6-4b13-91fc-9cfc3fcc63da)
+![CleanShot 2023-10-22 at 23 17 14@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/f6ea5419-3161-4463-9557-fc02cdd96a52)
+
+![CleanShot 2023-10-22 at 23 17 28@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/a0ef7ef4-8102-4707-a124-e9921bb8aeef)
+
+
 
 ## Configuration
 
