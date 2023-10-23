@@ -17,6 +17,7 @@ import (
 	"github.com/brutella/hap/characteristic"
 	"github.com/caarlos0/env/v9"
 	client "github.com/caarlos0/homekit-amt8000"
+	"github.com/cenkalti/backoff/v4"
 	logp "github.com/charmbracelet/log"
 )
 
@@ -28,7 +29,10 @@ var log = logp.NewWithOptions(os.Stderr, logp.Options{
 
 type clientProvider = func(func(cli *client.Client) error) error
 
-const manufacturer = "Intelbras"
+const (
+	manufacturer = "Intelbras"
+	retries      = 5
+)
 
 func main() {
 	var cfg Config
@@ -54,16 +58,22 @@ func main() {
 		defer clientLock.Unlock()
 		log.Debugf("got client lock after %s", time.Since(t))
 
-		cli, err := client.New(cfg.Host, cfg.Port, cfg.Password)
-		if err != nil {
-			return fmt.Errorf("could not init isecnet2 client: %w", err)
-		}
-		defer func() {
-			if err := cli.Close(); err != nil {
-				log.Error("could not close isecnet2 client", "err", err)
+		bo := backoff.NewExponentialBackOff()
+		bo.MaxInterval = time.Second * 5
+		bo.MaxElapsedTime = time.Minute
+
+		return backoff.Retry(func() error {
+			cli, err := client.New(cfg.Host, cfg.Port, cfg.Password)
+			if err != nil {
+				return fmt.Errorf("could not init isecnet2 client: %w", err)
 			}
-		}()
-		return fn(cli)
+			defer func() {
+				if err := cli.Close(); err != nil {
+					log.Error("could not close isecnet2 client", "err", err)
+				}
+			}()
+			return fn(cli)
+		}, bo)
 	}
 
 	var status client.Status
