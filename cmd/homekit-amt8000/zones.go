@@ -5,13 +5,13 @@ import (
 
 	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
-	"github.com/caarlos0/homekit-amt8000/isecnetv2"
+	client "github.com/caarlos0/homekit-amt8000"
 )
 
 func setupZones(
 	cli clientProvider,
 	cfg Config,
-	status isecnetv2.Status,
+	status client.Status,
 ) ([]*ContactSensor, []*MotionSensor) {
 	var contacts []*ContactSensor
 	var motions []*MotionSensor
@@ -22,7 +22,7 @@ func setupZones(
 		bypassFn := func(value interface{}, _ *http.Request) (response interface{}, code int) {
 			v := value.(bool)
 			log.Info("set zone bypass", "zone", zone, "bypass", v)
-			if err := cli(func(cli *isecnetv2.Client) error {
+			if err := cli(func(cli *client.Client) error {
 				return cli.Bypass(zone.number, !v)
 			}); err != nil {
 				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)

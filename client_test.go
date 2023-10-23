@@ -1,4 +1,4 @@
-package isecnetv2
+package amt8000
 
 import (
 	"testing"

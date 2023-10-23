@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/brutella/hap/characteristic"
-	"github.com/caarlos0/homekit-amt8000/isecnetv2"
+	client "github.com/caarlos0/homekit-amt8000"
 	"golang.org/x/exp/slices"
 )
 
@@ -91,15 +91,15 @@ func (c Config) allZones() []zoneConfig {
 	return zones
 }
 
-func (c Config) getAlarmState(status isecnetv2.Status) int {
+func (c Config) getAlarmState(status client.Status) int {
 	if status.Siren {
 		return characteristic.SecuritySystemCurrentStateAlarmTriggered
 	}
 
 	switch status.State {
-	case isecnetv2.StateDisarmed:
+	case client.StateDisarmed:
 		return characteristic.SecuritySystemCurrentStateDisarmed
-	case isecnetv2.StatePartial:
+	case client.StatePartial:
 		return c.getPartialStatus(status.Partitions)
 	default:
 		return c.getArmedState()
@@ -120,7 +120,7 @@ func (c Config) getArmedState() int {
 	return -1
 }
 
-func (c Config) getPartialStatus(partitions []isecnetv2.Partition) int {
+func (c Config) getPartialStatus(partitions []client.Partition) int {
 	armed := []int{}
 	for _, part := range partitions {
 		log.Debug("partition armed", "part", part.Number, "armed", part.Armed)

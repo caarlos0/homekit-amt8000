@@ -16,7 +16,7 @@ import (
 	"github.com/brutella/hap/accessory"
 	"github.com/brutella/hap/characteristic"
 	"github.com/caarlos0/env/v9"
-	"github.com/caarlos0/homekit-amt8000/isecnetv2"
+	client "github.com/caarlos0/homekit-amt8000"
 	logp "github.com/charmbracelet/log"
 )
 
@@ -26,7 +26,7 @@ var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	Prefix:          "homekit",
 })
 
-type clientProvider = func(func(cli *isecnetv2.Client) error) error
+type clientProvider = func(func(cli *client.Client) error) error
 
 const manufacturer = "Intelbras"
 
@@ -48,13 +48,13 @@ func main() {
 	)
 
 	var clientLock sync.Mutex
-	withCli := func(fn func(cli *isecnetv2.Client) error) error {
+	withCli := func(fn func(cli *client.Client) error) error {
 		t := time.Now()
 		clientLock.Lock()
 		defer clientLock.Unlock()
 		log.Debugf("got client lock after %s", time.Since(t))
 
-		cli, err := isecnetv2.New(cfg.Host, cfg.Port, cfg.Password)
+		cli, err := client.New(cfg.Host, cfg.Port, cfg.Password)
 		if err != nil {
 			return fmt.Errorf("could not init isecnet2 client: %w", err)
 		}
@@ -66,8 +66,8 @@ func main() {
 		return fn(cli)
 	}
 
-	var status isecnetv2.Status
-	if err := withCli(func(cli *isecnetv2.Client) (err error) {
+	var status client.Status
+	if err := withCli(func(cli *client.Client) (err error) {
 		status, err = cli.Status()
 		return
 	}); err != nil {
@@ -101,12 +101,12 @@ func main() {
 	})
 	panicBtn.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
 		v := value.(bool)
-		if err := withCli(func(cli *isecnetv2.Client) error {
+		if err := withCli(func(cli *client.Client) error {
 			if v {
 				log.Warn("triggering a panic!")
 				return cli.Panic()
 			}
-			return cli.Disarm(isecnetv2.AllPartitions)
+			return cli.Disarm(client.AllPartitions)
 		}); err != nil {
 			log.Error("failed to trigger panic", "err", err)
 			return nil, hap.JsonStatusResourceBusy
@@ -117,8 +117,8 @@ func main() {
 	go func() {
 		tick := time.NewTicker(time.Second * 3)
 		for range tick.C {
-			var status isecnetv2.Status
-			if err := withCli(func(cli *isecnetv2.Client) (err error) {
+			var status client.Status
+			if err := withCli(func(cli *client.Client) (err error) {
 				status, err = cli.Status()
 				return
 			}); err != nil {
@@ -199,7 +199,7 @@ func alarmUpdateHandler(
 		case characteristic.SecuritySystemTargetStateStayArm:
 			for _, part := range cfg.StayPartitions {
 				log.Info("arm stay", "partition", part)
-				if err := cli(func(cli *isecnetv2.Client) error {
+				if err := cli(func(cli *client.Client) error {
 					return cli.Arm(toPartition(part))
 				}); err != nil {
 					log.Error("could not arm", "err", err)
@@ -209,7 +209,7 @@ func alarmUpdateHandler(
 		case characteristic.SecuritySystemTargetStateAwayArm:
 			for _, part := range cfg.AwayPartitions {
 				log.Info("arm away", "partition", part)
-				if err := cli(func(cli *isecnetv2.Client) error {
+				if err := cli(func(cli *client.Client) error {
 					return cli.Arm(toPartition(part))
 				}); err != nil {
 					log.Error("could not arm partition 2", "err", err)
@@ -219,7 +219,7 @@ func alarmUpdateHandler(
 		case characteristic.SecuritySystemTargetStateNightArm:
 			for _, part := range cfg.NightPartitions {
 				log.Info("arm night", "partition", part)
-				if err := cli(func(cli *isecnetv2.Client) error {
+				if err := cli(func(cli *client.Client) error {
 					return cli.Arm(toPartition(part))
 				}); err != nil {
 					log.Error("could not arm partition 2", "err", err)
@@ -228,8 +228,8 @@ func alarmUpdateHandler(
 			}
 		case characteristic.SecuritySystemTargetStateDisarm:
 			log.Info("disarm")
-			if err := cli(func(cli *isecnetv2.Client) error {
-				return cli.Disarm(isecnetv2.AllPartitions)
+			if err := cli(func(cli *client.Client) error {
+				return cli.Disarm(client.AllPartitions)
 			}); err != nil {
 				log.Error("could not disarm", "err", err)
 				return nil, hap.JsonStatusInvalidValueInRequest
@@ -243,7 +243,7 @@ func alarmUpdateHandler(
 
 func toPartition(i int) byte {
 	if i == 0 {
-		return isecnetv2.AllPartitions
+		return client.AllPartitions
 	}
 	return byte(i)
 }

@@ -3,15 +3,15 @@ package main
 import (
 	"github.com/brutella/hap/accessory"
 	"github.com/brutella/hap/service"
-	"github.com/caarlos0/homekit-amt8000/isecnetv2"
+	client "github.com/caarlos0/homekit-amt8000"
 )
 
 type ContactSensors []*ContactSensor
 
-func (contacts ContactSensors) Update(cfg Config, status isecnetv2.Status) {
+func (contacts ContactSensors) Update(cfg Config, status client.Status) {
 	for i, zone := range cfg.ContactZones {
 		evt := status.Zones[zone-1].AnyEvent()
-		current := boolToInt(evt != isecnetv2.ZoneEventClean)
+		current := boolToInt(evt != client.ZoneEventClean)
 		if v := contacts[i].Contact.ContactSensorState.Value(); v == current {
 			continue
 		}
@@ -22,10 +22,10 @@ func (contacts ContactSensors) Update(cfg Config, status isecnetv2.Status) {
 
 type MotionSensors []*MotionSensor
 
-func (motions MotionSensors) Update(cfg Config, status isecnetv2.Status) {
+func (motions MotionSensors) Update(cfg Config, status client.Status) {
 	for i, zone := range cfg.MotionZones {
 		evt := status.Zones[zone-1].AnyEvent()
-		current := evt != isecnetv2.ZoneEventClean
+		current := evt != client.ZoneEventClean
 		if v := motions[i].Motion.MotionDetected.Value(); v == current {
 			continue
 		}

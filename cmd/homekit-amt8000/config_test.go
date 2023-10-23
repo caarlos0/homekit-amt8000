@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/brutella/hap/characteristic"
-	"github.com/caarlos0/homekit-amt8000/isecnetv2"
+	client "github.com/caarlos0/homekit-amt8000"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,7 +42,7 @@ func TestGetAlarmState(t *testing.T) {
 		require.Equal(
 			t,
 			characteristic.SecuritySystemCurrentStateAlarmTriggered,
-			cfg.getAlarmState(isecnetv2.Status{
+			cfg.getAlarmState(client.Status{
 				Siren: true,
 			}),
 		)
@@ -52,9 +52,9 @@ func TestGetAlarmState(t *testing.T) {
 		require.Equal(
 			t,
 			characteristic.SecuritySystemCurrentStateNightArm,
-			cfg.getAlarmState(isecnetv2.Status{
-				State: isecnetv2.StatePartial,
-				Partitions: []isecnetv2.Partition{
+			cfg.getAlarmState(client.Status{
+				State: client.StatePartial,
+				Partitions: []client.Partition{
 					{
 						Number: 1,
 						Armed:  false,
@@ -80,9 +80,9 @@ func TestGetAlarmState(t *testing.T) {
 		require.Equal(
 			t,
 			characteristic.SecuritySystemCurrentStateNightArm,
-			cfg.getAlarmState(isecnetv2.Status{
-				State: isecnetv2.StateArmed,
-				Partitions: []isecnetv2.Partition{
+			cfg.getAlarmState(client.Status{
+				State: client.StateArmed,
+				Partitions: []client.Partition{
 					{
 						Number: 1,
 						Armed:  true,
