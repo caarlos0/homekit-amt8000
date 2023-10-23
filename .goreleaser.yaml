@@ -14,6 +14,7 @@ before:
 builds:
   - env:
       - CGO_ENABLED=0
+    main: ./cmd/homekit-amt8000/
     goos:
       - linux
     goarch:
