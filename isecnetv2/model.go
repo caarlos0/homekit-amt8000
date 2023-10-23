@@ -23,6 +23,11 @@ type Zone struct {
 	Anulated bool
 }
 
+// Shows the sensor as open if it either is open or if it is violated.
+func (z Zone) IsOpen() bool {
+	return z.Open || z.Violated
+}
+
 type ZoneEvent uint
 
 const (

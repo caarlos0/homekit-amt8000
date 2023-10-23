@@ -37,7 +37,7 @@ func setupZones(
 				Name:         zone.name,
 				Manufacturer: manufacturer,
 			})
-			if status.Zones[zone.number].Open {
+			if status.Zones[zone.number].IsOpen() {
 				a.Motion.MotionDetected.SetValue(true)
 			}
 
@@ -49,7 +49,7 @@ func setupZones(
 				Name:         zone.name,
 				Manufacturer: manufacturer,
 			})
-			if status.Zones[zone.number].Open {
+			if status.Zones[zone.number].IsOpen() {
 				_ = a.Contact.ContactSensorState.SetValue(1)
 			}
 			a.Bypass.On.SetValue(!bypassing)

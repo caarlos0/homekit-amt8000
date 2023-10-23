@@ -103,7 +103,7 @@ Setup code is `001 02 003`.
 - [x] panic switch
 - [x] bypass zones (?)
 - [x] multiple partitions per state
-- [ ] show zones firing
+- [x] show zones firing
 - [ ] show partitions firing
 - [ ] battery statuses
 - [ ] read alarm mac addr
@@ -117,3 +117,17 @@ Setup code is `001 02 003`.
 - https://github.com/elvis-epx/alarme-intelbras
 - https://github.com/thspinto/isecnet-go
 - Wireshark
+
+## FAQ
+
+### Can you add this thing I need?
+
+No.
+
+### Can you merge my PR?
+
+Unlikely.
+
+### Did you enjoy writing this?
+
+Not in the slightest.
