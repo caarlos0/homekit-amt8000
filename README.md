@@ -39,19 +39,19 @@ MOTION="1,2,3"
 CONTACT="4,5,6"
 
 # Indexed zone names.
-# default: [Zone 1, Zone 2, ...]
+# default: "Zone 1,Zone 2,..."
 ZONE_NAMES="Kitchen door,Living Room Window"
 
 # Partitions to arm when set stay mode.
-# default: 1
+# required.
 STAY="1,2"
 
 # Partitions to arm when set to night mode.
-# default: 2
+# required.
 NIGHT="2,3"
 
 # Partitions to arm when set to away mode.
-# default: 0 (all partitions)
+# required.
 AWAY="0"
 ```
 
