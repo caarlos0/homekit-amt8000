@@ -16,10 +16,10 @@ func makeAuthPayload(pwd string) []byte {
 	payload = append(payload, softwareType...)
 	payload = append(payload, contactID...)
 	payload = append(payload, softwareVersion...)
-	return createPayload(cmdAuth, payload)
+	return makePayload(cmdAuth, payload)
 }
 
-func createPayload(cmd int, input []byte) []byte {
+func makePayload(cmd int, input []byte) []byte {
 	alarmID := splitIntoOctets(0x0000)
 	ourID := splitIntoOctets(0x8fff)
 	length := splitIntoOctets(len(input) + 2)
@@ -42,9 +42,9 @@ func mergeOctets(buf []byte) int {
 	return int(buf[0])*256 + int(buf[1])
 }
 
-func checksum(pacote []byte) byte {
+func checksum(buf []byte) byte {
 	var check byte
-	for _, n := range pacote {
+	for _, n := range buf {
 		check ^= n
 	}
 	check ^= 0xff
@@ -73,8 +73,8 @@ func contactIDEncode(pwd string) ([]byte, error) {
 	return buf, nil
 }
 
-func authReplySize(pass string) int {
-	switch len(pass) {
+func authReplySize(pwd string) int {
+	switch len(pwd) {
 	case 6:
 		return 10
 	default:
@@ -82,8 +82,8 @@ func authReplySize(pass string) int {
 	}
 }
 
-func parseAuthResponse(resp []byte) error {
-	cmd, result := parseResponse(resp)
+func parseAuthResponse(buf []byte) error {
+	cmd, result := parseResponse(buf)
 	if cmd != 0xf0f0 {
 		return fmt.Errorf("invalid command: %v", cmd)
 	}
@@ -101,12 +101,12 @@ func parseAuthResponse(resp []byte) error {
 	}
 }
 
-func parseResponse(resp []byte) (int, []byte) {
-	lenPayload := mergeOctets(resp[4:6]) - 2
-	cmd := mergeOctets(resp[6:8])
-	if len(resp) < 8+lenPayload || lenPayload < 0 {
+func parseResponse(buf []byte) (int, []byte) {
+	lenPayload := mergeOctets(buf[4:6]) - 2
+	cmd := mergeOctets(buf[6:8])
+	if len(buf) < 8+lenPayload || lenPayload < 0 {
 		return cmd, nil
 	}
-	payload := resp[8 : 8+lenPayload]
+	payload := buf[8 : 8+lenPayload]
 	return cmd, payload
 }

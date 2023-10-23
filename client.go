@@ -74,7 +74,7 @@ func New(host, port, pass string) (*Client, error) {
 }
 
 func (c *Client) Panic() error {
-	payload := createPayload(cmdPanic, []byte{0x02, 0xa5})
+	payload := makePayload(cmdPanic, []byte{0x02, 0xa5})
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not panic: %w", err)
 	}
@@ -100,7 +100,7 @@ func (c *Client) Bypass(zone int, set bool) error {
 		b = 0x01
 	}
 
-	payload := createPayload(cmdBypass, []byte{byte(zone - 1), b})
+	payload := makePayload(cmdBypass, []byte{byte(zone - 1), b})
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not set bypass=%v %v: %w", set, zone, err)
 	}
@@ -109,7 +109,7 @@ func (c *Client) Bypass(zone int, set bool) error {
 
 func (c *Client) TurnOffSiren(partition byte) error {
 	log.Debug("turn off siren")
-	payload := createPayload(cmdTurnOffSiren, []byte{partition})
+	payload := makePayload(cmdTurnOffSiren, []byte{partition})
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not turn siren off %v: %w", partition, err)
 	}
@@ -118,7 +118,7 @@ func (c *Client) TurnOffSiren(partition byte) error {
 
 func (c *Client) CleanFirings() error {
 	log.Debug("clean firings")
-	payload := createPayload(cmdCleanFiring, nil)
+	payload := makePayload(cmdCleanFiring, nil)
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not clean firing: %w", err)
 	}
@@ -127,7 +127,7 @@ func (c *Client) CleanFirings() error {
 
 func (c *Client) Status() (Status, error) {
 	log.Debug("status")
-	payload := createPayload(cmdStatus, nil)
+	payload := makePayload(cmdStatus, nil)
 	if _, err := c.conn.Write(payload); err != nil {
 		return Status{}, fmt.Errorf("could not gather status: %w", err)
 	}
@@ -152,7 +152,7 @@ func (c *Client) Status() (Status, error) {
 
 func (c *Client) Disarm(partition byte) error {
 	log.Debug("disarm", "partition", partition)
-	payload := createPayload(cmdArm, []byte{partition, subCmdDisarm})
+	payload := makePayload(cmdArm, []byte{partition, subCmdDisarm})
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not disarm: %w", err)
 	}
@@ -161,7 +161,7 @@ func (c *Client) Disarm(partition byte) error {
 
 func (c *Client) Arm(partition byte) error {
 	log.Debug("arm", "partition", partition)
-	payload := createPayload(cmdArm, []byte{partition, subCmdArm})
+	payload := makePayload(cmdArm, []byte{partition, subCmdArm})
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not arm %v: %w", partition, err)
 	}
@@ -189,7 +189,7 @@ func (c *Client) Arm(partition byte) error {
 }
 
 func (c *Client) Close() error {
-	if _, err := c.conn.Write(createPayload(cmdDisconnect, nil)); err != nil {
+	if _, err := c.conn.Write(makePayload(cmdDisconnect, nil)); err != nil {
 		return fmt.Errorf("could not disconnect: %w", err)
 	}
 	return c.conn.Close()
