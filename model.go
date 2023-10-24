@@ -76,7 +76,7 @@ func fromBytes(resp []byte) (Status, error) {
 		ZonesFiring: resp[20]&0x8 > 0,
 		ZonesClosed: resp[20]&0x4 > 0,
 		Siren:       resp[20]&0x2 > 0,
-		Zones:       make([]Zone, 48),
+		Zones:       make([]Zone, 64),
 		Sirens:      make([]Siren, 2),
 		Repeaters:   make([]Repeater, 2),
 	}
@@ -105,43 +105,33 @@ func fromBytes(resp []byte) (Status, error) {
 		status.Repeaters[i].Number = i + 1
 	}
 
-	for i, octet := range resp[38:46] {
+	for i, octet := range resp[38:45] {
 		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				status.Zones[i+j].Open = true
-			}
+			status.Zones[j+i*8].Open = octet&(1<<j) > 0
 		}
 	}
 
 	for i, octet := range resp[46:53] {
 		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				status.Zones[i+j].Violated = true
-			}
+			status.Zones[j+i*8].Violated = octet&(1<<j) > 0
 		}
 	}
 
 	for i, octet := range resp[54:62] {
 		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				status.Zones[i+j].Anulated = true
-			}
+			status.Zones[j+i*8].Anulated = octet&(1<<j) > 0
 		}
 	}
 
 	for i, octet := range resp[89:96] {
 		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				status.Zones[i+j].Tamper = true
-			}
+			status.Zones[j+i*8].Tamper = octet&(1<<j) > 0
 		}
 	}
 
-	for i, octet := range resp[104:113] {
+	for i, octet := range resp[105:112] {
 		for j := 0; j < 8; j++ {
-			if octet&(1<<j) > 0 {
-				status.Zones[i+j].LowBattery = true
-			}
+			status.Zones[j+i*8].LowBattery = octet&(1<<j) > 0
 		}
 	}
 
