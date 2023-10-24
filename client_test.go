@@ -16,23 +16,19 @@ func TestIsec(t *testing.T) {
 	status, err := cli.Status()
 	require.NoError(t, err)
 
-	require.Len(t, status.Zones, 48)
-	// for _, zone := range status.Zones {
-	// 	if zone.AnyEvent() > ZoneEventClean || zone.Tamper {
-	// 		t.Logf("zone: %+v", zone)
-	// 	}
-	// }
+	require.Len(t, status.Zones, 64)
+	for _, zone := range status.Zones {
+		t.Logf("zone: %+v", zone)
+	}
 
 	for _, siren := range status.Sirens {
-		t.Log(siren, "siren")
+		t.Logf("siren: %+v", siren)
 	}
 	for _, repeater := range status.Repeaters {
-		t.Log(repeater, "repeater")
+		t.Logf("repeater: %+v", repeater)
 	}
 
-	// for _, part := range status.Partitions {
-	// 	if part.Stay || part.Armed || part.Fired || part.Firing {
-	// 		t.Logf("partition: %+v", part)
-	// 	}
-	// }
+	for _, part := range status.Partitions {
+		t.Logf("partition: %+v", part)
+	}
 }
