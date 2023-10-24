@@ -23,6 +23,7 @@ type Status struct {
 
 type Zone struct {
 	Number     int
+	Enabled    bool
 	Open       bool
 	Violated   bool
 	Anulated   bool
@@ -42,6 +43,15 @@ type Repeater struct {
 	LowBattery bool
 }
 
+type Partition struct {
+	Number  int
+	Enabled bool
+	Armed   bool
+	Fired   bool
+	Firing  bool
+	Stay    bool
+}
+
 type BatteryStatus uint8
 
 const (
@@ -55,14 +65,6 @@ const (
 // Shows the sensor as open if it either is open or if it is violated.
 func (z Zone) IsOpen() bool {
 	return z.Open || z.Violated
-}
-
-type Partition struct {
-	Number int
-	Armed  bool
-	Fired  bool
-	Firing bool
-	Stay   bool
 }
 
 func fromBytes(resp []byte) (Status, error) {
@@ -79,21 +81,20 @@ func fromBytes(resp []byte) (Status, error) {
 		Zones:       make([]Zone, 64),
 		Sirens:      make([]Siren, 2),
 		Repeaters:   make([]Repeater, 2),
+		Partitions:  make([]Partition, 16),
 	}
 
 	// partitions
-	for i := 0; i < 17; i++ {
-		if resp[21+i]&0x80 == 1 {
-			continue
+	for i := 0; i < 16; i++ {
+		octet := resp[21+i]
+		status.Partitions[i] = Partition{
+			Number:  i,
+			Enabled: octet&0x80 > 0,
+			Armed:   octet&0x01 > 0,
+			Firing:  octet&0x04 > 0,
+			Fired:   octet&0x08 > 0,
+			Stay:    octet&0x40 > 0,
 		}
-
-		status.Partitions = append(status.Partitions, Partition{
-			Number: i,
-			Armed:  resp[21+i]&0x01 > 0,
-			Firing: resp[21+i]&0x04 > 0,
-			Fired:  resp[21+i]&0x08 > 0,
-			Stay:   resp[21+i]&0x40 > 0,
-		})
 	}
 
 	for i := 0; i < 48; i++ {
@@ -105,6 +106,11 @@ func fromBytes(resp []byte) (Status, error) {
 		status.Repeaters[i].Number = i + 1
 	}
 
+	for i, octet := range resp[12:19] {
+		for j := 0; j < 8; j++ {
+			status.Zones[j+i*8].Enabled = octet&(1<<j) > 0
+		}
+	}
 	for i, octet := range resp[38:45] {
 		for j := 0; j < 8; j++ {
 			status.Zones[j+i*8].Open = octet&(1<<j) > 0
