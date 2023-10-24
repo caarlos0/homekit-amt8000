@@ -21,7 +21,7 @@ func makeAuthPayload(pwd string) []byte {
 
 func makePayload(cmd int, input []byte) []byte {
 	alarmID := splitIntoOctets(0x0000)
-	ourID := splitIntoOctets(0x8fff)
+	ourID := splitIntoOctets(0x8ffe)
 	length := splitIntoOctets(len(input) + 2)
 	cmd_enc := splitIntoOctets(cmd)
 	payload := []byte{}

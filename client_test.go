@@ -18,14 +18,21 @@ func TestIsec(t *testing.T) {
 
 	require.Len(t, status.Zones, 48)
 	for _, zone := range status.Zones {
-		if zone.AnyEvent() > ZoneEventClean {
+		if zone.AnyEvent() > ZoneEventClean || zone.Tamper {
 			t.Logf("zone: %+v", zone)
 		}
 	}
 
-	for _, part := range status.Partitions {
-		if part.Stay || part.Armed || part.Fired || part.Firing {
-			t.Logf("partition: %+v", part)
-		}
+	for _, siren := range status.Sirens {
+		t.Log(siren, "siren")
 	}
+	for _, repeater := range status.Repeaters {
+		t.Log(repeater, "repeater")
+	}
+
+	// for _, part := range status.Partitions {
+	// 	if part.Stay || part.Armed || part.Fired || part.Firing {
+	// 		t.Logf("partition: %+v", part)
+	// 	}
+	// }
 }

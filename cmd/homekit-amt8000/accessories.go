@@ -2,50 +2,101 @@ package main
 
 import (
 	"github.com/brutella/hap/accessory"
+	"github.com/brutella/hap/characteristic"
 	"github.com/brutella/hap/service"
 	client "github.com/caarlos0/homekit-amt8000"
 )
 
-type ContactSensors []*ContactSensor
+type AlarmSensors []*AlarmSensor
 
-func (contacts ContactSensors) Update(cfg Config, status client.Status) {
-	for i, zone := range cfg.ContactZones {
-		evt := status.Zones[zone-1].AnyEvent()
-		current := boolToInt(evt != client.ZoneEventClean)
-		if v := contacts[i].Contact.ContactSensorState.Value(); v == current {
-			continue
-		}
-		_ = contacts[i].Contact.ContactSensorState.SetValue(current)
-		log.Info("contact", "zone", zone, "status", current, "event", evt)
+func (sensors AlarmSensors) Update(cfg Config, status client.Status) {
+	for i, zi := range cfg.allZones() {
+		zone := status.Zones[zi.number-1]
+		sensor := sensors[i]
+		sensor.Update(zone)
 	}
 }
 
-type MotionSensors []*MotionSensor
-
-func (motions MotionSensors) Update(cfg Config, status client.Status) {
-	for i, zone := range cfg.MotionZones {
-		evt := status.Zones[zone-1].AnyEvent()
-		current := evt != client.ZoneEventClean
-		if v := motions[i].Motion.MotionDetected.Value(); v == current {
-			continue
-		}
-		motions[i].Motion.MotionDetected.SetValue(current)
-		log.Info("motion", "zone", zone, "status", current, "event", evt)
-	}
-}
-
-type ContactSensor struct {
+type AlarmSensor struct {
 	*accessory.A
-	Contact *service.ContactSensor
-	Bypass  *service.Switch
+	Kind       zoneKind
+	Motion     *service.MotionSensor
+	Contact    *service.ContactSensor
+	Bypass     *service.Switch
+	LowBattery *characteristic.StatusLowBattery
+	Tamper     *characteristic.StatusTampered
 }
 
-func newContactSensor(info accessory.Info) *ContactSensor {
-	a := ContactSensor{}
+func (sensor *AlarmSensor) Update(zone client.Zone) {
+	batlvl := boolToInt(zone.LowBattery)
+	if sensor.LowBattery.Value() != batlvl {
+		log.Info("low battery", "zone", zone.Number, "status", zone.LowBattery)
+		_ = sensor.LowBattery.SetValue(batlvl)
+	}
+
+	tamper := boolToInt(zone.Tamper)
+	if sensor.Tamper.Value() != tamper {
+		log.Info("tamper", "zone", zone.Number, "status", zone.Tamper)
+		_ = sensor.Tamper.SetValue(tamper)
+	}
+
+	bypassing := zone.Anulated
+	if sensor.Bypass.On.Value() == bypassing {
+		log.Info("bypass", "zone", zone.Number, "status", !bypassing)
+		sensor.Bypass.On.SetValue(!bypassing)
+	}
+
+	switch sensor.Kind {
+	case kindContact:
+		current := boolToInt(zone.IsOpen())
+		if v := sensor.Contact.ContactSensorState.Value(); v == current {
+			return
+		}
+		_ = sensor.Contact.ContactSensorState.SetValue(current)
+		log.Info(
+			"contact",
+			"zone", zone.Number,
+			"status", current,
+			"open", zone.Open,
+			"violated", zone.Violated,
+		)
+	case kindMotion:
+		current := zone.IsOpen()
+		if v := sensor.Motion.MotionDetected.Value(); v == current {
+			return
+		}
+		sensor.Motion.MotionDetected.SetValue(current)
+		log.Info(
+			"motion",
+			"zone", zone.Number,
+			"status", current,
+			"open", zone.Open,
+			"violated", zone.Violated,
+		)
+	}
+}
+
+func newAlarmSensor(info accessory.Info, kind zoneKind) *AlarmSensor {
+	a := AlarmSensor{
+		Kind: kind,
+	}
 	a.A = accessory.New(info, accessory.TypeSensor)
 
-	a.Contact = service.NewContactSensor()
-	a.AddS(a.Contact.S)
+	a.LowBattery = characteristic.NewStatusLowBattery()
+	a.Tamper = characteristic.NewStatusTampered()
+
+	switch kind {
+	case kindContact:
+		a.Contact = service.NewContactSensor()
+		a.Contact.AddC(a.Tamper.C)
+		a.Contact.AddC(a.LowBattery.C)
+		a.AddS(a.Contact.S)
+	case kindMotion:
+		a.Motion = service.NewMotionSensor()
+		a.Motion.AddC(a.LowBattery.C)
+		a.Motion.AddC(a.Tamper.C)
+		a.AddS(a.Motion.S)
+	}
 
 	a.Bypass = service.NewSwitch()
 	a.AddS(a.Bypass.S)
@@ -53,36 +104,63 @@ func newContactSensor(info accessory.Info) *ContactSensor {
 	return &a
 }
 
-type MotionSensor struct {
+type SecuritySystem struct {
 	*accessory.A
-	Motion *service.MotionSensor
-	Bypass *service.Switch
+	SecuritySystem *service.SecuritySystem
+	LowBattery     *characteristic.StatusLowBattery
+	BatteryLevel   *characteristic.BatteryLevel
+	Tampered       *characteristic.StatusTampered
+	BatteryFault   *characteristic.StatusFault
 }
 
-func newMotionSensor(info accessory.Info) *MotionSensor {
-	a := MotionSensor{}
-	a.A = accessory.New(info, accessory.TypeSensor)
+func NewSecuritySystem(info accessory.Info) *SecuritySystem {
+	a := SecuritySystem{}
+	a.A = accessory.New(info, accessory.TypeSecuritySystem)
 
-	a.Motion = service.NewMotionSensor()
-	a.AddS(a.Motion.S)
+	a.SecuritySystem = service.NewSecuritySystem()
+	a.AddS(a.SecuritySystem.S)
 
-	a.Bypass = service.NewSwitch()
-	a.AddS(a.Bypass.S)
+	a.Tampered = characteristic.NewStatusTampered()
+	a.SecuritySystem.AddC(a.Tampered.C)
+
+	a.LowBattery = characteristic.NewStatusLowBattery()
+	a.SecuritySystem.AddC(a.LowBattery.C)
+
+	a.BatteryLevel = characteristic.NewBatteryLevel()
+	a.SecuritySystem.AddC(a.BatteryLevel.C)
+
+	a.BatteryFault = characteristic.NewStatusFault()
+	a.SecuritySystem.AddC(a.BatteryFault.C)
 
 	return &a
 }
 
-type PanicButton struct {
-	*accessory.A
-	Switch *service.Switch
-}
+func (alarm *SecuritySystem) Update(cfg Config, status client.Status) {
+	if state := cfg.getAlarmState(status); alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
+		err := alarm.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
+		log.Info("set current state", "state", state, "err", err)
+	}
 
-func NewPanicButoon(info accessory.Info) *PanicButton {
-	a := PanicButton{}
-	a.A = accessory.New(info, accessory.TypeSensor)
+	_ = alarm.Tampered.SetValue(boolToInt(status.Tamper))
+	_ = alarm.BatteryFault.SetValue(
+		boolToInt(status.BatteryStatus == client.BatteryStatusMissing),
+	)
+	_ = alarm.LowBattery.SetValue(
+		boolToInt(
+			status.BatteryStatus == client.BatteryStatusDead ||
+				status.BatteryStatus == client.BatteryStatusMissing,
+		),
+	)
 
-	a.Switch = service.NewSwitch()
-	a.AddS(a.Switch.S)
-
-	return &a
+	switch status.BatteryStatus {
+	case client.BatteryStatusMissing,
+		client.BatteryStatusDead:
+		_ = alarm.BatteryLevel.SetValue(0)
+	case client.BatteryStatusLow:
+		_ = alarm.BatteryLevel.SetValue(20)
+	case client.BatteryStatusMiddle:
+		_ = alarm.BatteryLevel.SetValue(50)
+	case client.BatteryStatusFull:
+		_ = alarm.BatteryLevel.SetValue(100)
+	}
 }

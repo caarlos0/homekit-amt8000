@@ -84,16 +84,14 @@ func main() {
 		log.Fatal("could not init accessories", "err", err)
 	}
 
-	bridge := accessory.NewBridge(accessory.Info{
-		Name: "Alarm Bridge",
-	})
-
-	alarm := accessory.NewSecuritySystem(accessory.Info{
+	alarm := NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",
 		Manufacturer: manufacturer,
 		Model:        status.Model,
 		Firmware:     status.Version,
 	})
+	alarm.Id = 0
+
 	if state := cfg.getAlarmState(status); state >= 0 {
 		err := alarm.SecuritySystem.SecuritySystemTargetState.SetValue(state)
 		log.Info("set target state", "state", state, "err", err)
@@ -103,12 +101,11 @@ func main() {
 		cfg,
 	)
 
-	contacts, motions := setupZones(withCli, cfg, status)
-
 	panicBtn := accessory.NewSwitch(accessory.Info{
 		Name:         "Trigger panic",
 		Manufacturer: manufacturer,
 	})
+	panicBtn.Id = 2
 	panicBtn.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
 		v := value.(bool)
 		if err := withCli(func(cli *client.Client) error {
@@ -124,6 +121,8 @@ func main() {
 		return nil, hap.JsonStatusSuccess
 	}
 
+	sensors := setupZones(withCli, cfg, status)
+
 	go func() {
 		tick := time.NewTicker(time.Second * 3)
 		for range tick.C {
@@ -136,13 +135,8 @@ func main() {
 				continue
 			}
 
-			if state := cfg.getAlarmState(status); alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
-				err := alarm.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
-				log.Info("set current state", "state", state, "err", err)
-			}
-
-			ContactSensors(contacts).Update(cfg, status)
-			MotionSensors(motions).Update(cfg, status)
+			alarm.Update(cfg, status)
+			AlarmSensors(sensors).Update(cfg, status)
 			panicBtn.Switch.On.SetValue(status.Siren)
 		}
 	}()
@@ -151,8 +145,8 @@ func main() {
 
 	server, err := hap.NewServer(
 		fs,
-		bridge.A,
-		securityAccessories(alarm, contacts, motions, panicBtn)...,
+		alarm.A,
+		securityAccessories(sensors, panicBtn)...,
 	)
 	if err != nil {
 		log.Fatal("fail to start server", "error", err)
@@ -177,19 +171,13 @@ func main() {
 }
 
 func securityAccessories(
-	alarm *accessory.SecuritySystem,
-	contacts []*ContactSensor,
-	motions []*MotionSensor,
+	sensors []*AlarmSensor,
 	panicBtn *accessory.Switch,
 ) []*accessory.A {
-	result := []*accessory.A{alarm.A}
-	for _, c := range contacts {
+	result := []*accessory.A{panicBtn.A}
+	for _, c := range sensors {
 		result = append(result, c.A)
 	}
-	for _, m := range motions {
-		result = append(result, m.A)
-	}
-	result = append(result, panicBtn.A)
 	return result
 }
 

@@ -11,14 +11,11 @@ alarm system.
 
 ![CleanShot 2023-10-22 at 23 18 16@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/304b1428-ddd2-4f4a-896e-c648e3388e12)
 
-
 ###### Zones (motion and contact) + Bypass switches
 
 ![CleanShot 2023-10-22 at 23 17 14@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/f6ea5419-3161-4463-9557-fc02cdd96a52)
 
 ![CleanShot 2023-10-22 at 23 17 28@2x](https://github.com/caarlos0/homekit-amt8000/assets/245435/a0ef7ef4-8102-4707-a124-e9921bb8aeef)
-
-
 
 ## Configuration
 
@@ -112,8 +109,9 @@ Setup code is `001 02 003`.
 - [x] multiple partitions per state
 - [x] show zones firing
 - [ ] show partitions firing
-- [ ] battery statuses
+- [x] battery statuses
 - [ ] read alarm mac addr
+- [ ] receive notifications from the alarm system
 
 ## License
 

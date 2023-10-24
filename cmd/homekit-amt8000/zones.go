@@ -8,54 +8,39 @@ import (
 	client "github.com/caarlos0/homekit-amt8000"
 )
 
+const zoneIDStart uint64 = 100
+
 func setupZones(
 	cli clientProvider,
 	cfg Config,
 	status client.Status,
-) ([]*ContactSensor, []*MotionSensor) {
-	var contacts []*ContactSensor
-	var motions []*MotionSensor
+) []*AlarmSensor {
+	var sensors []*AlarmSensor
 	for _, zone := range cfg.allZones() {
 		zone := zone
 
-		bypassing := status.Zones[zone.number].Anulated
 		bypassFn := func(value interface{}, _ *http.Request) (response interface{}, code int) {
 			v := value.(bool)
-			log.Info("set zone bypass", "zone", zone, "bypass", v)
+			log.Info("set zone bypass", "zone", zone.number, "bypass", v)
 			if err := cli(func(cli *client.Client) error {
 				return cli.Bypass(zone.number, !v)
 			}); err != nil {
-				log.Error("failed to set bypass", "zone", zone, "value", v, "err", err)
+				log.Error("failed to set bypass", "zone", zone.number, "value", v, "err", err)
 				return nil, hap.JsonStatusResourceBusy
 			}
 			return nil, hap.JsonStatusSuccess
 		}
 
-		switch zone.kind {
-		case kindMotion:
-			a := newMotionSensor(accessory.Info{
-				Name:         zone.name,
-				Manufacturer: manufacturer,
-			})
-			if status.Zones[zone.number].IsOpen() {
-				a.Motion.MotionDetected.SetValue(true)
-			}
+		a := newAlarmSensor(accessory.Info{
+			Name:         zone.name,
+			Manufacturer: manufacturer,
+		}, zone.kind)
+		a.Id = zoneIDStart + uint64(zone.number)
 
-			a.Bypass.On.SetValue(!bypassing)
-			a.Bypass.On.SetValueRequestFunc = bypassFn
-			motions = append(motions, a)
-		case kindContact:
-			a := newContactSensor(accessory.Info{
-				Name:         zone.name,
-				Manufacturer: manufacturer,
-			})
-			if status.Zones[zone.number].IsOpen() {
-				_ = a.Contact.ContactSensorState.SetValue(1)
-			}
-			a.Bypass.On.SetValue(!bypassing)
-			a.Bypass.On.SetValueRequestFunc = bypassFn
-			contacts = append(contacts, a)
-		}
+		a.Bypass.On.SetValueRequestFunc = bypassFn
+		a.Update(status.Zones[zone.number])
+
+		sensors = append(sensors, a)
 	}
-	return contacts, motions
+	return sensors
 }
