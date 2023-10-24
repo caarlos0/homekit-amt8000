@@ -9,6 +9,7 @@ import (
 
 	"github.com/caarlos0/sync/cio"
 	logp "github.com/charmbracelet/log"
+	"github.com/j-keck/arping"
 )
 
 var log = logp.NewWithOptions(os.Stderr, logp.Options{
@@ -71,6 +72,15 @@ func New(host, port, pass string) (*Client, error) {
 		pass: pass,
 	}
 	return cli, cli.init()
+}
+
+func MacAddress(addr string) (string, error) {
+	ip := net.ParseIP(addr)
+	hw, _, err := arping.Ping(ip)
+	if err != nil {
+		return "", fmt.Errorf("could not get the mac address: %w", err)
+	}
+	return hw.String(), nil
 }
 
 func (c *Client) Panic() error {

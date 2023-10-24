@@ -110,7 +110,7 @@ Setup code is `001 02 003`.
 - [x] show zones firing
 - [ ] show partitions firing
 - [x] battery statuses
-- [ ] read alarm mac addr
+- [x] read alarm mac addr
 - [ ] receive notifications from the alarm system
 
 ## License

@@ -32,3 +32,12 @@ func TestIsec(t *testing.T) {
 		t.Logf("partition: %+v", part)
 	}
 }
+
+func TestMacAddress(t *testing.T) {
+	cli := &Client{
+		addr: "192.168.1.111",
+	}
+	hw, err := cli.HWAddress()
+	require.NoError(t, err)
+	require.NotEmpty(t, hw)
+}

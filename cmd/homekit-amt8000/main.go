@@ -83,6 +83,21 @@ func main() {
 	}); err != nil {
 		log.Fatal("could not init accessories", "err", err)
 	}
+	macAddr, err := client.MacAddress(cfg.Host)
+	if err != nil {
+		log.Warn(
+			"could not get the mac address, maybe run with 'sudo setcap cap_net_raw+ep'?",
+			"err",
+			err,
+		)
+	}
+	log.Info(
+		"got system information",
+		"manufacturer", manufacturer,
+		"model", status.Model,
+		"version", status.Version,
+		"mac", macAddr,
+	)
 
 	bridge := accessory.NewBridge(accessory.Info{
 		Name:         "Alarm Bridge",
@@ -91,6 +106,7 @@ func main() {
 
 	alarm := NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",
+		SerialNumber: macAddr,
 		Manufacturer: manufacturer,
 		Model:        status.Model,
 		Firmware:     status.Version,
