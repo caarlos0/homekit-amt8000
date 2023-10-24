@@ -84,13 +84,18 @@ func main() {
 		log.Fatal("could not init accessories", "err", err)
 	}
 
+	bridge := accessory.NewBridge(accessory.Info{
+		Name:         "Alarm Bridge",
+		Manufacturer: manufacturer,
+	})
+
 	alarm := NewSecuritySystem(accessory.Info{
 		Name:         "Alarm",
 		Manufacturer: manufacturer,
 		Model:        status.Model,
 		Firmware:     status.Version,
 	})
-	alarm.Id = 0
+	alarm.Id = 2
 
 	if state := cfg.getAlarmState(status); state >= 0 {
 		err := alarm.SecuritySystem.SecuritySystemTargetState.SetValue(state)
@@ -105,7 +110,7 @@ func main() {
 		Name:         "Trigger panic",
 		Manufacturer: manufacturer,
 	})
-	panicBtn.Id = 2
+	panicBtn.Id = 3
 	panicBtn.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
 		v := value.(bool)
 		if err := withCli(func(cli *client.Client) error {
@@ -122,6 +127,8 @@ func main() {
 	}
 
 	sensors := setupZones(withCli, cfg, status)
+	sirens := setupSirens(cfg, status)
+	repeaters := setupRepeaters(cfg, status)
 
 	go func() {
 		tick := time.NewTicker(time.Second * 3)
@@ -136,8 +143,19 @@ func main() {
 			}
 
 			alarm.Update(cfg, status)
-			AlarmSensors(sensors).Update(cfg, status)
 			panicBtn.Switch.On.SetValue(status.Siren)
+
+			for i, zi := range cfg.allZones() {
+				zone := status.Zones[zi.number-1]
+				sensor := sensors[i]
+				sensor.Update(zone)
+			}
+			for i, number := range cfg.Sirens {
+				sirens[i].Update(status.Sirens[number-1])
+			}
+			for i, number := range cfg.Repeaters {
+				repeaters[i].Update(status.Repeaters[number-1])
+			}
 		}
 	}()
 
@@ -145,8 +163,8 @@ func main() {
 
 	server, err := hap.NewServer(
 		fs,
-		alarm.A,
-		securityAccessories(sensors, panicBtn)...,
+		bridge.A,
+		securityAccessories(sensors, sirens, repeaters, alarm, panicBtn)...,
 	)
 	if err != nil {
 		log.Fatal("fail to start server", "error", err)
@@ -172,10 +190,22 @@ func main() {
 
 func securityAccessories(
 	sensors []*AlarmSensor,
+	sirens []*Siren,
+	repeaters []*Repeater,
+	alarm *SecuritySystem,
 	panicBtn *accessory.Switch,
 ) []*accessory.A {
-	result := []*accessory.A{panicBtn.A}
+	result := []*accessory.A{
+		panicBtn.A,
+		alarm.A,
+	}
 	for _, c := range sensors {
+		result = append(result, c.A)
+	}
+	for _, c := range sirens {
+		result = append(result, c.A)
+	}
+	for _, c := range repeaters {
 		result = append(result, c.A)
 	}
 	return result

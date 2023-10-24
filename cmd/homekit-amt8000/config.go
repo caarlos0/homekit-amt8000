@@ -19,6 +19,8 @@ type Config struct {
 	StayPartitions  []int    `env:"STAY,required"`
 	NightPartitions []int    `env:"NIGHT,required"`
 	ZoneNames       []string `env:"ZONE_NAMES"`
+	Sirens          []int    `env:"SIRENS"            envDefault:"1"`
+	Repeaters       []int    `env:"REPEATERS"         envDefault:"1"`
 }
 
 type zoneKind uint8

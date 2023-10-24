@@ -17,11 +17,11 @@ func TestIsec(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, status.Zones, 48)
-	for _, zone := range status.Zones {
-		if zone.AnyEvent() > ZoneEventClean || zone.Tamper {
-			t.Logf("zone: %+v", zone)
-		}
-	}
+	// for _, zone := range status.Zones {
+	// 	if zone.AnyEvent() > ZoneEventClean || zone.Tamper {
+	// 		t.Logf("zone: %+v", zone)
+	// 	}
+	// }
 
 	for _, siren := range status.Sirens {
 		t.Log(siren, "siren")
