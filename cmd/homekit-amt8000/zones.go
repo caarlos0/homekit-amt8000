@@ -20,6 +20,34 @@ type AlarmSensor struct {
 	Tamper     *characteristic.StatusTampered
 }
 
+func newAlarmSensor(info accessory.Info, kind zoneKind) *AlarmSensor {
+	a := AlarmSensor{
+		Kind: kind,
+	}
+	a.A = accessory.New(info, accessory.TypeSensor)
+
+	a.LowBattery = characteristic.NewStatusLowBattery()
+	a.Tamper = characteristic.NewStatusTampered()
+
+	switch kind {
+	case kindContact:
+		a.Contact = service.NewContactSensor()
+		a.Contact.AddC(a.Tamper.C)
+		a.Contact.AddC(a.LowBattery.C)
+		a.AddS(a.Contact.S)
+	case kindMotion:
+		a.Motion = service.NewMotionSensor()
+		a.Motion.AddC(a.LowBattery.C)
+		a.Motion.AddC(a.Tamper.C)
+		a.AddS(a.Motion.S)
+	}
+
+	a.Bypass = service.NewSwitch()
+	a.AddS(a.Bypass.S)
+
+	return &a
+}
+
 func (sensor *AlarmSensor) Update(zone client.Zone) {
 	batlvl := boolToInt(zone.LowBattery)
 	if sensor.LowBattery.Value() != batlvl {
@@ -49,7 +77,6 @@ func (sensor *AlarmSensor) Update(zone client.Zone) {
 		log.Info(
 			"contact",
 			"zone", zone.Number,
-			"status", current,
 			"open", zone.Open,
 			"violated", zone.Violated,
 		)
@@ -62,39 +89,10 @@ func (sensor *AlarmSensor) Update(zone client.Zone) {
 		log.Info(
 			"motion",
 			"zone", zone.Number,
-			"status", current,
 			"open", zone.Open,
 			"violated", zone.Violated,
 		)
 	}
-}
-
-func newAlarmSensor(info accessory.Info, kind zoneKind) *AlarmSensor {
-	a := AlarmSensor{
-		Kind: kind,
-	}
-	a.A = accessory.New(info, accessory.TypeSensor)
-
-	a.LowBattery = characteristic.NewStatusLowBattery()
-	a.Tamper = characteristic.NewStatusTampered()
-
-	switch kind {
-	case kindContact:
-		a.Contact = service.NewContactSensor()
-		a.Contact.AddC(a.Tamper.C)
-		a.Contact.AddC(a.LowBattery.C)
-		a.AddS(a.Contact.S)
-	case kindMotion:
-		a.Motion = service.NewMotionSensor()
-		a.Motion.AddC(a.LowBattery.C)
-		a.Motion.AddC(a.Tamper.C)
-		a.AddS(a.Motion.S)
-	}
-
-	a.Bypass = service.NewSwitch()
-	a.AddS(a.Bypass.S)
-
-	return &a
 }
 
 func setupZones(
