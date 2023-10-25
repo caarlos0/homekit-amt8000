@@ -16,6 +16,7 @@ import (
 	"github.com/brutella/hap/accessory"
 	"github.com/brutella/hap/characteristic"
 	"github.com/caarlos0/env/v9"
+	goversion "github.com/caarlos0/go-version"
 	client "github.com/caarlos0/homekit-amt8000"
 	"github.com/cenkalti/backoff/v4"
 	logp "github.com/charmbracelet/log"
@@ -39,6 +40,15 @@ func main() {
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatal("could not parse env", "err", err)
 	}
+
+	info := goversion.GetVersionInfo(
+		goversion.WithAppDetails(
+			"homekit-amt8000",
+			"Unofficial Homekit bridge for the Intelbras AMT8000 alarm system",
+			"© Carlos A. Becker - https://becker.software",
+		),
+	)
+	fmt.Println(info.String())
 
 	log.Info(
 		"loading accessories",
@@ -92,7 +102,7 @@ func main() {
 		)
 	}
 	log.Info(
-		"got system information",
+		"got alarm system information",
 		"manufacturer", manufacturer,
 		"model", status.Model,
 		"version", status.Version,
@@ -102,6 +112,7 @@ func main() {
 	bridge := accessory.NewBridge(accessory.Info{
 		Name:         "Alarm Bridge",
 		Manufacturer: manufacturer,
+		Firmware:     info.GitVersion,
 	})
 
 	alarm := NewSecuritySystem(accessory.Info{
@@ -122,25 +133,8 @@ func main() {
 		cfg,
 	)
 
-	panicBtn := accessory.NewSwitch(accessory.Info{
-		Name:         "Trigger panic",
-		Manufacturer: manufacturer,
-	})
+	panicBtn := setupPanicButton(withCli)
 	panicBtn.Id = 3
-	panicBtn.Switch.On.SetValueRequestFunc = func(value interface{}, _ *http.Request) (response interface{}, code int) {
-		v := value.(bool)
-		if err := withCli(func(cli *client.Client) error {
-			if v {
-				log.Warn("triggering a panic!")
-				return cli.Panic()
-			}
-			return cli.Disarm(client.AllPartitions)
-		}); err != nil {
-			log.Error("failed to trigger panic", "err", err)
-			return nil, hap.JsonStatusResourceBusy
-		}
-		return nil, hap.JsonStatusSuccess
-	}
 
 	sensors := setupZones(withCli, cfg, status)
 	sirens := setupSirens(cfg, status)
