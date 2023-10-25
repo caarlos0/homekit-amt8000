@@ -29,6 +29,7 @@ Full list of them and what they are for:
 HOST=192.168.207.4
 
 # Alarm password.
+# Should be the remote configuration password (usually 6 digits).
 # required.
 PASSWORD=123456
 
@@ -39,7 +40,7 @@ PORT=9009
 # Zones that are motion sensors.
 MOTION="1,2,3"
 
-# Zones that are contact sensors (i.e. doors).
+# Zones that are contact sensors (i.e. doors, windows).
 CONTACT="4,5,6"
 
 # Indexed zone names.
