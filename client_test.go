@@ -21,16 +21,21 @@ func TestIsec(t *testing.T) {
 		t.Logf("zone: %+v", zone)
 	}
 
+	require.Len(t, status.Sirens, 2)
 	for _, siren := range status.Sirens {
 		t.Logf("siren: %+v", siren)
 	}
+	require.Len(t, status.Repeaters, 2)
 	for _, repeater := range status.Repeaters {
 		t.Logf("repeater: %+v", repeater)
 	}
 
+	require.Len(t, status.Partitions, 16)
 	for _, part := range status.Partitions {
 		t.Logf("partition: %+v", part)
 	}
+
+	t.Log(status.BatteryStatus.String())
 }
 
 func TestMacAddress(t *testing.T) {
