@@ -5,23 +5,38 @@ import (
 	"strconv"
 )
 
+const (
+	// 00 = N/A
+	// 01 = Remote programming software
+	// 02 = Monitoring software
+	// 03 = Mobile APP
+	// 04 = Clone Account
+	deviceType = 0x03
+
+	// version of this software
+	softwareVersion = 0x10
+
+	// id to handle responses in the alarm system
+	ourID = 0x8ffe
+
+	// no idea
+	alarmID = 0x0000
+)
+
 func makeAuthPayload(pwd string) []byte {
-	softwareType := []byte{0x02}
-	softwareVersion := []byte{0x10}
 	contactID, err := contactIDEncode(pwd)
 	if err != nil {
 		panic(err)
 	}
-	payload := []byte{}
-	payload = append(payload, softwareType...)
+	payload := []byte{deviceType}
 	payload = append(payload, contactID...)
-	payload = append(payload, softwareVersion...)
+	payload = append(payload, softwareVersion)
 	return makePayload(cmdAuth, payload)
 }
 
 func makePayload(cmd int, input []byte) []byte {
-	alarmID := splitIntoOctets(0x0000)
-	ourID := splitIntoOctets(0x8ffe)
+	alarmID := splitIntoOctets(alarmID)
+	ourID := splitIntoOctets(ourID)
 	length := splitIntoOctets(len(input) + 2)
 	cmd_enc := splitIntoOctets(cmd)
 	payload := []byte{}
@@ -70,16 +85,12 @@ func contactIDEncode(pwd string) ([]byte, error) {
 		}
 		buf = append(buf, byte(digit))
 	}
-	return buf, nil
-}
 
-func authReplySize(pwd string) int {
-	switch len(pwd) {
-	case 6:
-		return 10
-	default:
-		return 9
+	if len(pwd) == 4 {
+		buf = append([]byte{0x0a, 0x0a}, buf...)
 	}
+
+	return buf, nil
 }
 
 func parseAuthResponse(buf []byte) error {
