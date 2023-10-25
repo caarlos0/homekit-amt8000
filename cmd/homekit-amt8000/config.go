@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/brutella/hap/characteristic"
 	client "github.com/caarlos0/homekit-amt8000"
@@ -10,17 +11,18 @@ import (
 )
 
 type Config struct {
-	Host            string   `env:"HOST,required"`
-	Port            string   `env:"PORT"              envDefault:"9009"`
-	Password        string   `env:"PASSWORD,required"`
-	MotionZones     []int    `env:"MOTION"`
-	ContactZones    []int    `env:"CONTACT"`
-	AwayPartitions  []int    `env:"AWAY,required"` // 0xff
-	StayPartitions  []int    `env:"STAY,required"`
-	NightPartitions []int    `env:"NIGHT,required"`
-	ZoneNames       []string `env:"ZONE_NAMES"`
-	Sirens          []int    `env:"SIRENS"`
-	Repeaters       []int    `env:"REPEATERS"`
+	Host              string        `env:"HOST,required"`
+	Port              string        `env:"PORT"                envDefault:"9009"`
+	Password          string        `env:"PASSWORD,required"`
+	MotionZones       []int         `env:"MOTION"`
+	ContactZones      []int         `env:"CONTACT"`
+	AwayPartitions    []int         `env:"AWAY,required"` // 0xff
+	StayPartitions    []int         `env:"STAY,required"`
+	NightPartitions   []int         `env:"NIGHT,required"`
+	ZoneNames         []string      `env:"ZONE_NAMES"`
+	Sirens            []int         `env:"SIRENS"`
+	Repeaters         []int         `env:"REPEATERS"`
+	CleanFiringsAfter time.Duration `env:"CLEAN_FIRINGS_AFTER"`
 }
 
 type zoneKind uint8

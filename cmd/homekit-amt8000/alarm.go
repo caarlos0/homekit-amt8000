@@ -1,6 +1,10 @@
 package main
 
 import (
+	"net/http"
+	"time"
+
+	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
 	"github.com/brutella/hap/characteristic"
 	"github.com/brutella/hap/service"
@@ -13,10 +17,16 @@ type SecuritySystem struct {
 	LowBattery     *characteristic.StatusLowBattery
 	BatteryLevel   *characteristic.BatteryLevel
 	Tampered       *characteristic.StatusTampered
+
+	cfg     Config
+	execute Executor
 }
 
-func NewSecuritySystem(info accessory.Info) *SecuritySystem {
-	a := SecuritySystem{}
+func NewSecuritySystem(info accessory.Info, cfg Config, execute Executor) *SecuritySystem {
+	a := &SecuritySystem{
+		cfg:     cfg,
+		execute: execute,
+	}
 	a.A = accessory.New(info, accessory.TypeSecuritySystem)
 
 	a.SecuritySystem = service.NewSecuritySystem()
@@ -31,11 +41,13 @@ func NewSecuritySystem(info accessory.Info) *SecuritySystem {
 	a.BatteryLevel = characteristic.NewBatteryLevel()
 	a.SecuritySystem.AddC(a.BatteryLevel.C)
 
-	return &a
+	a.SecuritySystem.SecuritySystemTargetState.SetValueRequestFunc = a.updateHandler
+
+	return a
 }
 
-func (a *SecuritySystem) Update(cfg Config, status client.Status) {
-	if v := cfg.getAlarmState(status); a.SecuritySystem.SecuritySystemCurrentState.Value() != v {
+func (a *SecuritySystem) Update(status client.Status) {
+	if v := a.cfg.getAlarmState(status); a.SecuritySystem.SecuritySystemCurrentState.Value() != v {
 		err := a.SecuritySystem.SecuritySystemCurrentState.SetValue(v)
 		log.Info("set current state", "state", v, "err", err)
 	}
@@ -55,4 +67,78 @@ func (a *SecuritySystem) Update(cfg Config, status client.Status) {
 		_ = a.BatteryLevel.SetValue(v)
 		log.Info("alarm status", "battery-level", v)
 	}
+}
+
+func (a *SecuritySystem) updateHandler(
+	v interface{},
+	_ *http.Request,
+) (response interface{}, code int) {
+	// If we fail to arm, it might be that some partition succeeded arming,
+	// while another didn't...
+	// To prevent weird states, we disarm the alarm again if any partition
+	// failed.
+	disarm := func() {
+		_ = a.SecuritySystem.SecuritySystemTargetState.SetValue(
+			characteristic.SecuritySystemCurrentStateDisarmed,
+		)
+		a.updateHandler(characteristic.SecuritySystemCurrentStateDisarmed, nil)
+	}
+	switch v.(int) {
+	case characteristic.SecuritySystemTargetStateStayArm:
+		for _, part := range a.cfg.StayPartitions {
+			log.Info("arm stay", "partition", part)
+			if err := a.execute(func(cli *client.Client) error {
+				return cli.Arm(toPartition(part))
+			}); err != nil {
+				log.Error("could not arm", "err", err)
+				disarm()
+				return nil, hap.JsonStatusResourceBusy
+			}
+		}
+	case characteristic.SecuritySystemTargetStateAwayArm:
+		for _, part := range a.cfg.AwayPartitions {
+			log.Info("arm away", "partition", part)
+			if err := a.execute(func(cli *client.Client) error {
+				return cli.Arm(toPartition(part))
+			}); err != nil {
+				log.Error("could not arm partition 2", "err", err)
+				disarm()
+				return nil, hap.JsonStatusResourceBusy
+			}
+		}
+	case characteristic.SecuritySystemTargetStateNightArm:
+		for _, part := range a.cfg.NightPartitions {
+			log.Info("arm night", "partition", part)
+			if err := a.execute(func(cli *client.Client) error {
+				return cli.Arm(toPartition(part))
+			}); err != nil {
+				log.Error("could not arm partition 2", "err", err)
+				disarm()
+				return nil, hap.JsonStatusResourceBusy
+			}
+		}
+	case characteristic.SecuritySystemTargetStateDisarm:
+		log.Info("disarm")
+		if err := a.execute(func(cli *client.Client) error {
+			return cli.Disarm(client.AllPartitions)
+		}); err != nil {
+			log.Error("could not disarm", "err", err)
+			return nil, hap.JsonStatusInvalidValueInRequest
+		}
+		if a.cfg.CleanFiringsAfter == 0 {
+			return nil, hap.JsonStatusSuccess
+		}
+		go func() {
+			time.Sleep(a.cfg.CleanFiringsAfter)
+			log.Info("cleaning firings")
+			if err := a.execute(func(cli *client.Client) error {
+				return cli.CleanFirings()
+			}); err != nil {
+				log.Error("could not clean firings", "err", err)
+			}
+		}()
+	default:
+		return nil, hap.JsonStatusResourceDoesNotExist
+	}
+	return nil, hap.JsonStatusSuccess
 }

@@ -66,6 +66,11 @@ SIRENS="1,2"
 # Repeater numbers you want to be shown.
 # It'll show them as a contact sensor, with Tamper and Battery status.
 REPEATERS="1,2"
+
+# If the alarm is triggered, and you turn it off, after this amount of time the
+# bridge will automatically clean the firings.
+# If empty or 0, it will not automatically do that.
+CLEAN_FIRINGS_AFTER=5m
 ```
 
 > **Warning**

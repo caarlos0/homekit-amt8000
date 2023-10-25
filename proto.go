@@ -1,6 +1,7 @@
 package amt8000
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 )
@@ -93,6 +94,8 @@ func contactIDEncode(pwd string) ([]byte, error) {
 	return buf, nil
 }
 
+var ErrInvalidPassword = errors.New("invalid password")
+
 func parseAuthResponse(buf []byte) error {
 	cmd, result := parseResponse(buf)
 	if cmd != 0xf0f0 {
@@ -106,7 +109,7 @@ func parseAuthResponse(buf []byte) error {
 	case 0:
 		return nil
 	case 1:
-		return fmt.Errorf("invalid password")
+		return ErrInvalidPassword
 	default:
 		return fmt.Errorf("authentication failed: %v", result[0])
 	}

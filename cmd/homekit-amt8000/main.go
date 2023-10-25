@@ -14,7 +14,6 @@ import (
 
 	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
-	"github.com/brutella/hap/characteristic"
 	"github.com/caarlos0/env/v9"
 	goversion "github.com/caarlos0/go-version"
 	client "github.com/caarlos0/homekit-amt8000"
@@ -28,7 +27,7 @@ var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	Prefix:          "homekit",
 })
 
-type clientProvider = func(func(cli *client.Client) error) error
+type Executor = func(func(cli *client.Client) error) error
 
 const (
 	manufacturer = "Intelbras"
@@ -62,7 +61,7 @@ func main() {
 	)
 
 	var clientLock sync.Mutex
-	withCli := func(fn func(cli *client.Client) error) error {
+	execute := func(fn func(cli *client.Client) error) error {
 		t := time.Now()
 		clientLock.Lock()
 		defer clientLock.Unlock()
@@ -72,7 +71,7 @@ func main() {
 		bo.MaxInterval = time.Second * 5
 		bo.MaxElapsedTime = time.Minute
 
-		return backoff.Retry(func() error {
+		return backoff.RetryNotify(func() error {
 			cli, err := client.New(cfg.Host, cfg.Port, cfg.Password)
 			if err != nil {
 				return fmt.Errorf("could not init isecnet2 client: %w", err)
@@ -82,12 +81,20 @@ func main() {
 					log.Error("could not close isecnet2 client", "err", err)
 				}
 			}()
-			return fn(cli)
-		}, bo)
+			if err := fn(cli); err != nil {
+				if errors.Is(err, client.ErrOpenZones) ||
+					errors.Is(err, client.ErrInvalidPassword) {
+					return backoff.Permanent(err)
+				}
+			}
+			return nil
+		}, bo, func(err error, _ time.Duration) {
+			log.Error("command to central failed", "err", err)
+		})
 	}
 
 	var status client.Status
-	if err := withCli(func(cli *client.Client) (err error) {
+	if err := execute(func(cli *client.Client) (err error) {
 		status, err = cli.Status()
 		return
 	}); err != nil {
@@ -121,22 +128,18 @@ func main() {
 		Manufacturer: manufacturer,
 		Model:        status.Model,
 		Firmware:     status.Version,
-	})
+	}, cfg, execute)
 	alarm.Id = 2
 
 	if state := cfg.getAlarmState(status); state >= 0 {
 		err := alarm.SecuritySystem.SecuritySystemTargetState.SetValue(state)
 		log.Info("set target state", "state", state, "err", err)
 	}
-	alarm.SecuritySystem.SecuritySystemTargetState.SetValueRequestFunc = alarmUpdateHandler(
-		withCli,
-		cfg,
-	)
 
-	panicBtn := setupPanicButton(withCli)
+	panicBtn := setupPanicButton(execute)
 	panicBtn.Id = 3
 
-	sensors := setupZones(withCli, cfg, status)
+	sensors := setupZones(execute, cfg, status)
 	sirens := setupSirens(cfg, status)
 	repeaters := setupRepeaters(cfg, status)
 
@@ -144,7 +147,7 @@ func main() {
 		tick := time.NewTicker(time.Second * 3)
 		for range tick.C {
 			var status client.Status
-			if err := withCli(func(cli *client.Client) (err error) {
+			if err := execute(func(cli *client.Client) (err error) {
 				status, err = cli.Status()
 				return
 			}); err != nil {
@@ -152,7 +155,7 @@ func main() {
 				continue
 			}
 
-			alarm.Update(cfg, status)
+			alarm.Update(status)
 			panicBtn.Switch.On.SetValue(status.Siren)
 
 			for i, zi := range cfg.allZones() {
@@ -226,57 +229,6 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
-}
-
-func alarmUpdateHandler(
-	cli clientProvider,
-	cfg Config,
-) func(value interface{}, request *http.Request) (response interface{}, code int) {
-	return func(v interface{}, _ *http.Request) (response interface{}, code int) {
-		switch v.(int) {
-		case characteristic.SecuritySystemTargetStateStayArm:
-			for _, part := range cfg.StayPartitions {
-				log.Info("arm stay", "partition", part)
-				if err := cli(func(cli *client.Client) error {
-					return cli.Arm(toPartition(part))
-				}); err != nil {
-					log.Error("could not arm", "err", err)
-					return nil, hap.JsonStatusResourceBusy
-				}
-			}
-		case characteristic.SecuritySystemTargetStateAwayArm:
-			for _, part := range cfg.AwayPartitions {
-				log.Info("arm away", "partition", part)
-				if err := cli(func(cli *client.Client) error {
-					return cli.Arm(toPartition(part))
-				}); err != nil {
-					log.Error("could not arm partition 2", "err", err)
-					return nil, hap.JsonStatusResourceBusy
-				}
-			}
-		case characteristic.SecuritySystemTargetStateNightArm:
-			for _, part := range cfg.NightPartitions {
-				log.Info("arm night", "partition", part)
-				if err := cli(func(cli *client.Client) error {
-					return cli.Arm(toPartition(part))
-				}); err != nil {
-					log.Error("could not arm partition 2", "err", err)
-					return nil, hap.JsonStatusResourceBusy
-				}
-			}
-		case characteristic.SecuritySystemTargetStateDisarm:
-			log.Info("disarm")
-			if err := cli(func(cli *client.Client) error {
-				return cli.Disarm(client.AllPartitions)
-			}); err != nil {
-				log.Error("could not disarm", "err", err)
-				return nil, hap.JsonStatusInvalidValueInRequest
-			}
-		default:
-			return nil, hap.JsonStatusResourceDoesNotExist
-		}
-		return nil, hap.JsonStatusSuccess
-	}
 }
 
 func toPartition(i int) byte {

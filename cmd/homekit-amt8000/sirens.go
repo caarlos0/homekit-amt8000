@@ -28,8 +28,6 @@ func newSiren(info accessory.Info) *Siren {
 	a.Connected.AddC(a.LowBattery.C)
 	a.AddS(a.Connected.S)
 
-	_ = a.Connected.ContactSensorState.SetValue(0)
-
 	return &a
 }
 

@@ -2,6 +2,7 @@ package amt8000
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -11,6 +12,8 @@ import (
 	logp "github.com/charmbracelet/log"
 	"github.com/j-keck/arping"
 )
+
+var ErrOpenZones = errors.New("failed to arm: open zones")
 
 var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	ReportTimestamp: true,
@@ -174,7 +177,7 @@ func (c *Client) Arm(partition byte) error {
 	}
 
 	if resp[0] == 0xf0 {
-		return fmt.Errorf("failed to arm: open zones")
+		return ErrOpenZones
 	}
 
 	if resp[0] == 0x40 {
