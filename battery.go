@@ -47,9 +47,9 @@ func (b BatteryStatus) Level() int {
 func batteryStatusFor(resp []byte) BatteryStatus {
 	generalTroubles := resp[71]
 	switch {
-	case generalTroubles&(1<<0x04) > 0:
+	case generalTroubles&(1<<0x02) > 0:
 		return BatteryStatusShortCircuited
-	case generalTroubles&(1<<0x05) > 0:
+	case generalTroubles&(1<<0x03) > 0:
 		return BatteryStatusMissing
 	}
 
