@@ -1,4 +1,5 @@
 db
 .env
-
+homekit-amt8000
+homekit-amt8000.test
 dist/
