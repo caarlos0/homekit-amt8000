@@ -34,10 +34,7 @@ func TestIsec(t *testing.T) {
 }
 
 func TestMacAddress(t *testing.T) {
-	cli := &Client{
-		addr: "192.168.1.111",
-	}
-	hw, err := cli.HWAddress()
+	hw, err := MacAddress("192.168.1.1")
 	require.NoError(t, err)
 	require.NotEmpty(t, hw)
 }
