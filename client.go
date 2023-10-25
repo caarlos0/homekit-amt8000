@@ -74,9 +74,8 @@ func New(host, port, pass string) (*Client, error) {
 	return cli, cli.init()
 }
 
-func MacAddress(addr string) (string, error) {
-	ip := net.ParseIP(addr)
-	hw, _, err := arping.Ping(ip)
+func MacAddress(ip string) (string, error) {
+	hw, _, err := arping.Ping(net.ParseIP(ip))
 	if err != nil {
 		return "", fmt.Errorf("could not get the mac address: %w", err)
 	}
@@ -91,17 +90,6 @@ func (c *Client) Panic() error {
 	return nil
 }
 
-// adding bypass of zone 1:
-// 0000   00 00 00 01 00 04 40 1f 00 01 a4
-//
-// removing bypass of zone 1:
-// 0000   00 00 00 01 00 04 40 1f 00 00 a5
-//
-// adding bypass of zone 2:
-// 0000   00 00 00 01 00 04 40 1f 01 01 a5
-//
-// removing bypass of zone 2:
-// 0000   00 00 00 01 00 04 40 1f 01 00 a4
 func (c *Client) Bypass(zone int, set bool) error {
 	// 0x01 add
 	// 0x00 remove
@@ -175,8 +163,6 @@ func (c *Client) Arm(partition byte) error {
 	if _, err := c.conn.Write(payload); err != nil {
 		return fmt.Errorf("could not arm %v: %w", partition, err)
 	}
-	// fail			   00000000  8f ff 00 00 00 03 f0 fd  27 a6                    |........'.|
-	// succ			   00000000  8f ff 00 00 00 04 40 1e  02 91 46                 |......@...F|
 
 	resp, err := c.limitTimedRead(6)
 	if err != nil {
@@ -217,7 +203,7 @@ func (c *Client) init() error {
 		return fmt.Errorf("could not auth: %w", err)
 	}
 
-	resp, err := c.limitTimedRead(authReplySize(c.pass))
+	resp, err := c.limitTimedRead(10)
 	if err != nil {
 		return fmt.Errorf("could not auth: %w", err)
 	}
