@@ -3,22 +3,21 @@ package amt8000
 import (
 	"encoding/hex"
 	"fmt"
-	"sync"
 )
 
 type Status struct {
-	Model         string
-	Version       string
-	State         State
-	ZonesFiring   bool
-	ZonesClosed   bool
-	Siren         bool
-	Tamper        bool
-	BatteryStatus BatteryStatus
-	Partitions    []Partition
-	Zones         []Zone
-	Sirens        []Siren
-	Repeaters     []Repeater
+	Model       string
+	Version     string
+	State       State
+	ZonesFiring bool
+	ZonesClosed bool
+	Siren       bool
+	Tamper      bool
+	Battery     BatteryStatus
+	Partitions  []Partition
+	Zones       []Zone
+	Sirens      []Siren
+	Repeaters   []Repeater
 }
 
 type Zone struct {
@@ -29,6 +28,11 @@ type Zone struct {
 	Anulated   bool
 	Tamper     bool
 	LowBattery bool
+}
+
+// Shows the sensor as open if it either is open or if it is violated.
+func (z Zone) IsOpen() bool {
+	return z.Open || z.Violated
 }
 
 type Siren struct {
@@ -52,22 +56,7 @@ type Partition struct {
 	Stay    bool
 }
 
-type BatteryStatus uint8
-
-const (
-	BatteryStatusMissing BatteryStatus = iota
-	BatteryStatusDead
-	BatteryStatusLow
-	BatteryStatusMiddle
-	BatteryStatusFull
-)
-
-// Shows the sensor as open if it either is open or if it is violated.
-func (z Zone) IsOpen() bool {
-	return z.Open || z.Violated
-}
-
-func fromBytes(resp []byte) (Status, error) {
+func statusFromBytes(resp []byte) (Status, error) {
 	if len(resp) != 143 {
 		return Status{}, fmt.Errorf("invalid status:\n%s", hex.Dump(resp))
 	}
@@ -159,34 +148,7 @@ func fromBytes(resp []byte) (Status, error) {
 		status.Repeaters[i].LowBattery = octet&0x01 > 0
 	}
 
-	status.BatteryStatus = batteryStatusFor(resp)
+	status.Battery = batteryStatusFor(resp)
 	status.Tamper = resp[71]&(1<<0x01) > 0
 	return status, nil
-}
-
-var onceBatteryDeadLog sync.Once
-
-func batteryStatusFor(resp []byte) BatteryStatus {
-	batt := resp[142]
-	switch {
-	case batt&0x01 == 0x01:
-		return BatteryStatusDead
-	case batt&0x02 == 0x02:
-		return BatteryStatusLow
-	case batt&0x03 == 0x03:
-		return BatteryStatusMiddle
-	case batt&0x04 == 0x04:
-		return BatteryStatusFull
-	default:
-		onceBatteryDeadLog.Do(func() {
-			octet := resp[71]
-			if octet&(1<<0x04) > 0 {
-				log.Warn("battery is short circuited")
-			}
-			if octet&(1<<0x05) > 0 {
-				log.Warn("battery is missing")
-			}
-		})
-		return BatteryStatusMissing
-	}
 }

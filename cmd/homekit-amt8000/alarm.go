@@ -38,32 +38,30 @@ func NewSecuritySystem(info accessory.Info) *SecuritySystem {
 	return &a
 }
 
-func (alarm *SecuritySystem) Update(cfg Config, status client.Status) {
-	if state := cfg.getAlarmState(status); alarm.SecuritySystem.SecuritySystemCurrentState.Value() != state {
-		err := alarm.SecuritySystem.SecuritySystemCurrentState.SetValue(state)
-		log.Info("set current state", "state", state, "err", err)
+func (a *SecuritySystem) Update(cfg Config, status client.Status) {
+	if v := cfg.getAlarmState(status); a.SecuritySystem.SecuritySystemCurrentState.Value() != v {
+		err := a.SecuritySystem.SecuritySystemCurrentState.SetValue(v)
+		log.Info("set current state", "state", v, "err", err)
 	}
 
-	_ = alarm.Tampered.SetValue(boolToInt(status.Tamper))
-	_ = alarm.BatteryFault.SetValue(
-		boolToInt(status.BatteryStatus == client.BatteryStatusMissing),
-	)
-	_ = alarm.LowBattery.SetValue(
-		boolToInt(
-			status.BatteryStatus == client.BatteryStatusDead ||
-				status.BatteryStatus == client.BatteryStatusMissing,
-		),
-	)
+	if v := boolToInt(status.Tamper); a.Tampered.Value() != v {
+		_ = a.Tampered.SetValue(boolToInt(status.Tamper))
+		log.Info("alarm status", "tamper", status.Tamper)
+	}
 
-	switch status.BatteryStatus {
-	case client.BatteryStatusMissing,
-		client.BatteryStatusDead:
-		_ = alarm.BatteryLevel.SetValue(0)
-	case client.BatteryStatusLow:
-		_ = alarm.BatteryLevel.SetValue(20)
-	case client.BatteryStatusMiddle:
-		_ = alarm.BatteryLevel.SetValue(50)
-	case client.BatteryStatusFull:
-		_ = alarm.BatteryLevel.SetValue(100)
+	if v := boolToInt(status.Battery <= client.BatteryStatusShortCircuited); a.BatteryFault.Value() != v {
+		_ = a.BatteryFault.SetValue(v)
+		log.Info("alarm status", "battery-fault", status.Battery.String())
+	}
+
+	// shows unknown, missing, short-circuit, and dead as a dead battery.
+	if v := boolToInt(status.Battery <= client.BatteryStatusDead); a.LowBattery.Value() != v {
+		_ = a.LowBattery.SetValue(v)
+		log.Info("alarm status", "low-battery", status.Battery.String())
+	}
+
+	if v := status.Battery.Level(); a.BatteryLevel.Value() != v {
+		_ = a.BatteryLevel.SetValue(v)
+		log.Info("alarm status", "battery-level", v)
 	}
 }

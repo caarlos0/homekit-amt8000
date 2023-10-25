@@ -35,7 +35,7 @@ func TestIsec(t *testing.T) {
 		t.Logf("partition: %+v", part)
 	}
 
-	t.Log(status.BatteryStatus.String())
+	t.Log(status.Battery.String())
 }
 
 func TestMacAddress(t *testing.T) {

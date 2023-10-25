@@ -145,7 +145,7 @@ func (c *Client) Status() (Status, error) {
 	}
 
 	_, reply := parseResponse(append(resp, resp2...))
-	return fromBytes(reply)
+	return statusFromBytes(reply)
 }
 
 func (c *Client) Disarm(partition byte) error {
