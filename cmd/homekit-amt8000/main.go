@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -19,6 +20,7 @@ import (
 	client "github.com/caarlos0/homekit-amt8000"
 	"github.com/cenkalti/backoff/v4"
 	logp "github.com/charmbracelet/log"
+	str "github.com/charmbracelet/x/exp/strings"
 )
 
 var log = logp.NewWithOptions(os.Stderr, logp.Options{
@@ -44,9 +46,9 @@ func main() {
 		"loading accessories",
 		"partitions",
 		strings.Join([]string{
-			fmt.Sprintf("stay: %v", cfg.StayPartitions),
-			fmt.Sprintf("away: %v", cfg.AwayPartitions),
-			fmt.Sprintf("night: %v", cfg.NightPartitions),
+			fmt.Sprintf("stay: %s", intJoin(cfg.StayPartitions)),
+			fmt.Sprintf("away: %s", intJoin(cfg.AwayPartitions)),
+			fmt.Sprintf("night: %s", intJoin(cfg.NightPartitions)),
 		}, "\n"),
 		"zones", allZoneConfigs(cfg.allZones()).String(),
 	)
@@ -290,4 +292,12 @@ func toPartition(i int) byte {
 		return client.AllPartitions
 	}
 	return byte(i)
+}
+
+func intJoin(zz []int) string {
+	zs := make([]string, len(zz))
+	for i := range zz {
+		zs = append(zs, strconv.Itoa(zz[i]))
+	}
+	return str.EnglishJoin(zs, true)
 }

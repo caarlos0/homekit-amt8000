@@ -58,6 +58,14 @@ NIGHT="2,3"
 # Partitions to arm when set to away mode.
 # required.
 AWAY="0"
+
+# Siren numbers you want to be shown.
+# It'll show them as a contact sensor, with Tamper and Battery status.
+SIRENS="1,2"
+
+# Repeater numbers you want to be shown.
+# It'll show them as a contact sensor, with Tamper and Battery status.
+REPEATERS="1,2"
 ```
 
 > **Warning**

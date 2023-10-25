@@ -8,6 +8,7 @@ require (
 	github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/charmbracelet/log v0.2.5
+	github.com/charmbracelet/x/exp/strings v0.0.0-20231025020039-6eef475135df
 	github.com/j-keck/arping v1.0.3
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
