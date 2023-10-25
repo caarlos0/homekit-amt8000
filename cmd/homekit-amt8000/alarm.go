@@ -13,7 +13,6 @@ type SecuritySystem struct {
 	LowBattery     *characteristic.StatusLowBattery
 	BatteryLevel   *characteristic.BatteryLevel
 	Tampered       *characteristic.StatusTampered
-	BatteryFault   *characteristic.StatusFault
 }
 
 func NewSecuritySystem(info accessory.Info) *SecuritySystem {
@@ -32,9 +31,6 @@ func NewSecuritySystem(info accessory.Info) *SecuritySystem {
 	a.BatteryLevel = characteristic.NewBatteryLevel()
 	a.SecuritySystem.AddC(a.BatteryLevel.C)
 
-	a.BatteryFault = characteristic.NewStatusFault()
-	a.SecuritySystem.AddC(a.BatteryFault.C)
-
 	return &a
 }
 
@@ -47,11 +43,6 @@ func (a *SecuritySystem) Update(cfg Config, status client.Status) {
 	if v := boolToInt(status.Tamper); a.Tampered.Value() != v {
 		_ = a.Tampered.SetValue(boolToInt(status.Tamper))
 		log.Info("alarm status", "tamper", status.Tamper)
-	}
-
-	if v := boolToInt(status.Battery <= client.BatteryStatusShortCircuited); a.BatteryFault.Value() != v {
-		_ = a.BatteryFault.SetValue(v)
-		log.Info("alarm status", "battery-fault", status.Battery.String())
 	}
 
 	// shows unknown, missing, short-circuit, and dead as a dead battery.
