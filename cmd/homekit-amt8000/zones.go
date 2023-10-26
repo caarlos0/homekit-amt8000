@@ -83,7 +83,7 @@ func (a *AlarmSensor) Update(zone client.Zone) {
 
 	bypassing := zone.Anulated
 	if a.Bypass.On.Value() == bypassing {
-		log.Info("bypass", "zone", zone.Number, "status", !bypassing)
+		log.Info("bypass", "zone", zone.Number, "status", bypassing)
 		a.Bypass.On.SetValue(!bypassing)
 	}
 
