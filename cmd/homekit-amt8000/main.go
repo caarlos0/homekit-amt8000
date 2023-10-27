@@ -15,7 +15,6 @@ import (
 	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
 	"github.com/caarlos0/env/v9"
-	goversion "github.com/caarlos0/go-version"
 	client "github.com/caarlos0/homekit-amt8000"
 	"github.com/cenkalti/backoff/v4"
 	logp "github.com/charmbracelet/log"
@@ -27,6 +26,12 @@ var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	Prefix:          "homekit",
 })
 
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 type Executor = func(func(cli *client.Client) error) error
 
 const (
@@ -35,19 +40,17 @@ const (
 )
 
 func main() {
+	log.Info(
+		"homekit-amt8000",
+		"version", version,
+		"commit", commit,
+		"date", date,
+	)
+
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
 		log.Fatal("could not parse env", "err", err)
 	}
-
-	info := goversion.GetVersionInfo(
-		goversion.WithAppDetails(
-			"homekit-amt8000",
-			"Unofficial Homekit bridge for the Intelbras AMT8000 alarm system",
-			"© Carlos A. Becker - https://becker.software",
-		),
-	)
-	fmt.Println(info.String())
 
 	log.Info(
 		"loading accessories",

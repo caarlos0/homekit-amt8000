@@ -5,7 +5,6 @@ go 1.21.1
 require (
 	github.com/brutella/hap v0.0.27
 	github.com/caarlos0/env/v9 v9.0.0
-	github.com/caarlos0/go-version v0.1.1
 	github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/charmbracelet/log v0.2.5
