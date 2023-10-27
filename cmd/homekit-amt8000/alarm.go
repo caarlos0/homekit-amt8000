@@ -142,3 +142,10 @@ func (a *SecuritySystem) updateHandler(
 	}
 	return nil, hap.JsonStatusSuccess
 }
+
+func toPartition(i int) byte {
+	if i == 0 {
+		return client.AllPartitions
+	}
+	return byte(i)
+}

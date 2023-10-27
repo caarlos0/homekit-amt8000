@@ -45,6 +45,11 @@ func main() {
 		"version", version,
 		"commit", commit,
 		"date", date,
+		"info", strings.Join([]string{
+			"Homekit bridge for Intelbras AMT8000 alarm systems",
+			"© Carlos Alexandro Becker",
+			"https://becker.software",
+		}, "\n"),
 	)
 
 	var cfg Config
@@ -106,9 +111,8 @@ func main() {
 	macAddr, err := client.MacAddress(cfg.Host)
 	if err != nil {
 		log.Warn(
-			"could not get the mac address, maybe run with 'sudo setcap cap_net_raw+ep'?",
-			"err",
-			err,
+			"could not get the mac address, needs 'cap_net_raw+ep' capabilities",
+			"err", err,
 		)
 	}
 	log.Info(
@@ -122,7 +126,7 @@ func main() {
 	bridge := accessory.NewBridge(accessory.Info{
 		Name:         "Alarm Bridge",
 		Manufacturer: manufacturer,
-		Firmware:     info.GitVersion,
+		Firmware:     version,
 	})
 
 	alarm := NewSecuritySystem(accessory.Info{
@@ -178,8 +182,7 @@ func main() {
 	fs := hap.NewFsStore("./db")
 
 	server, err := hap.NewServer(
-		fs,
-		bridge.A,
+		fs, bridge.A,
 		securityAccessories(sensors, sirens, repeaters, alarm, panicBtn)...,
 	)
 	if err != nil {
@@ -232,11 +235,4 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
-}
-
-func toPartition(i int) byte {
-	if i == 0 {
-		return client.AllPartitions
-	}
-	return byte(i)
 }
