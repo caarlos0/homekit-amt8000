@@ -14,7 +14,7 @@ import (
 
 	"github.com/brutella/hap"
 	"github.com/brutella/hap/accessory"
-	"github.com/caarlos0/env/v9"
+	"github.com/caarlos0/env/v10"
 	client "github.com/caarlos0/homekit-amt8000"
 	"github.com/cenkalti/backoff/v4"
 	logp "github.com/charmbracelet/log"
