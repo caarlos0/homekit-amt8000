@@ -12,16 +12,16 @@ const (
 	// 02 = Monitoring software
 	// 03 = Mobile APP
 	// 04 = Clone Account
-	deviceType = 0x03
+	deviceType = 0x00
 
 	// version of this software
 	softwareVersion = 0x10
 
 	// id to handle responses in the alarm system
-	ourID = 0x8ffe
+	srcID = 0x8fe0
 
 	// no idea
-	alarmID = 0x0000
+	dstID = 0x0000
 )
 
 func makeAuthPayload(pwd string) []byte {
@@ -36,13 +36,13 @@ func makeAuthPayload(pwd string) []byte {
 }
 
 func makePayload(cmd int, input []byte) []byte {
-	alarmID := splitIntoOctets(alarmID)
-	ourID := splitIntoOctets(ourID)
+	dstID := splitIntoOctets(dstID)
+	srcID := splitIntoOctets(srcID)
 	length := splitIntoOctets(len(input) + 2)
 	cmd_enc := splitIntoOctets(cmd)
 	payload := []byte{}
-	payload = append(payload, alarmID...)
-	payload = append(payload, ourID...)
+	payload = append(payload, dstID...)
+	payload = append(payload, srcID...)
 	payload = append(payload, length...)
 	payload = append(payload, cmd_enc...)
 	payload = append(payload, input...)
