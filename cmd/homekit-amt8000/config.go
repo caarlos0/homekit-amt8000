@@ -16,7 +16,8 @@ type Config struct {
 	Password          string        `env:"PASSWORD,required"`
 	MotionZones       []int         `env:"MOTION"`
 	ContactZones      []int         `env:"CONTACT"`
-	AwayPartitions    []int         `env:"AWAY,required"` // 0xff
+	BypassZones       []int         `env:"BYPASS"`
+	AwayPartitions    []int         `env:"AWAY,required"`
 	StayPartitions    []int         `env:"STAY,required"`
 	NightPartitions   []int         `env:"NIGHT,required"`
 	ZoneNames         []string      `env:"ZONE_NAMES"`
@@ -42,9 +43,10 @@ func (z zoneKind) String() string {
 }
 
 type zoneConfig struct {
-	number int
-	name   string
-	kind   zoneKind
+	number      int
+	name        string
+	kind        zoneKind
+	allowBypass bool
 }
 
 func (c Config) zoneName(n int) string {
@@ -74,16 +76,18 @@ func (c Config) allZones() []zoneConfig {
 	var zones []zoneConfig
 	for _, z := range c.MotionZones {
 		zones = append(zones, zoneConfig{
-			number: z,
-			name:   c.zoneName(z),
-			kind:   kindMotion,
+			number:      z,
+			name:        c.zoneName(z),
+			kind:        kindMotion,
+			allowBypass: slices.Contains(c.BypassZones, z),
 		})
 	}
 	for _, z := range c.ContactZones {
 		zones = append(zones, zoneConfig{
-			number: z,
-			name:   c.zoneName(z),
-			kind:   kindContact,
+			number:      z,
+			name:        c.zoneName(z),
+			kind:        kindContact,
+			allowBypass: slices.Contains(c.BypassZones, z),
 		})
 	}
 	slices.SortFunc(zones, func(a, b zoneConfig) int {

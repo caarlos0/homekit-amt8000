@@ -43,6 +43,9 @@ MOTION="1,2,3"
 # Zones that are contact sensors (i.e. doors, windows).
 CONTACT="4,5,6"
 
+# Zones to show the bypass switch for.
+BYPASS='1,2,3,4,5,6,7,8'
+
 # Indexed zone names.
 # default: "Zone 1,Zone 2,..."
 ZONE_NAMES="Kitchen door,Living Room Window"

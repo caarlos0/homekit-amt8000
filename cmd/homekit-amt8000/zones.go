@@ -45,9 +45,11 @@ func newAlarmSensor(info accessory.Info, zone zoneConfig, execute Executor) *Ala
 		a.AddS(a.Motion.S)
 	}
 
-	a.Bypass = service.NewSwitch()
-	a.AddS(a.Bypass.S)
-	a.Bypass.On.SetValueRequestFunc = a.updateHandler
+	if zone.allowBypass {
+		a.Bypass = service.NewSwitch()
+		a.AddS(a.Bypass.S)
+		a.Bypass.On.SetValueRequestFunc = a.updateHandler
+	}
 
 	return a
 }
@@ -82,7 +84,7 @@ func (a *AlarmSensor) Update(zone client.Zone) {
 	}
 
 	bypassing := zone.Anulated
-	if a.Bypass.On.Value() == bypassing {
+	if a.zone.allowBypass && a.Bypass.On.Value() == bypassing {
 		log.Info("bypass", "zone", zone.Number, "status", bypassing)
 		a.Bypass.On.SetValue(!bypassing)
 	}
