@@ -83,6 +83,16 @@ func (a *SecuritySystem) updateHandler(
 		)
 		a.updateHandler(characteristic.SecuritySystemCurrentStateDisarmed, nil)
 	}
+
+	// Disarm the alarm before any state changes.
+	// This allows to properly change between armed states.
+	if err := a.execute(func(cli *client.Client) error {
+		return cli.Disarm(client.AllPartitions)
+	}); err != nil {
+		log.Error("could not disarm", "err", err)
+		return nil, hap.JsonStatusInvalidValueInRequest
+	}
+
 	switch v.(int) {
 	case characteristic.SecuritySystemTargetStateStayArm:
 		for _, part := range a.cfg.StayPartitions {
@@ -119,12 +129,6 @@ func (a *SecuritySystem) updateHandler(
 		}
 	case characteristic.SecuritySystemTargetStateDisarm:
 		log.Info("disarm")
-		if err := a.execute(func(cli *client.Client) error {
-			return cli.Disarm(client.AllPartitions)
-		}); err != nil {
-			log.Error("could not disarm", "err", err)
-			return nil, hap.JsonStatusInvalidValueInRequest
-		}
 		if a.cfg.CleanFiringsAfter == 0 {
 			return nil, hap.JsonStatusSuccess
 		}
