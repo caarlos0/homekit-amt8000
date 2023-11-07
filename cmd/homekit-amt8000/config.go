@@ -24,6 +24,7 @@ type Config struct {
 	Sirens            []int         `env:"SIRENS"`
 	Repeaters         []int         `env:"REPEATERS"`
 	CleanFiringsAfter time.Duration `env:"CLEAN_FIRINGS_AFTER"`
+	Address           string        `env:"LISTEN" envDefault:":9009"`
 }
 
 type zoneKind uint8
