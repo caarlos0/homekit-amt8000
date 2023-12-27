@@ -71,6 +71,11 @@ func (a *AlarmSensor) updateHandler(
 }
 
 func (a *AlarmSensor) Update(zone client.Zone) {
+	openGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Open))
+	violatedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Violated))
+	tamperedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Tamper))
+	bypassedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Anulated))
+
 	batlvl := boolToInt(zone.LowBattery)
 	if a.LowBattery.Value() != batlvl {
 		log.Info("low battery", "zone", zone.Number, "status", zone.LowBattery)

@@ -18,6 +18,7 @@ import (
 	client "github.com/caarlos0/homekit-amt8000"
 	"github.com/cenkalti/backoff/v4"
 	logp "github.com/charmbracelet/log"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var log = logp.NewWithOptions(os.Stderr, logp.Options{
@@ -80,6 +81,7 @@ func main() {
 		bo.MaxElapsedTime = time.Minute
 
 		return backoff.RetryNotify(func() error {
+			requestCounter.Inc()
 			cli, err := client.New(cfg.Host, cfg.Port, cfg.Password)
 			if err != nil {
 				return fmt.Errorf("could not init isecnet2 client: %w", err)
@@ -90,6 +92,7 @@ func main() {
 				}
 			}()
 			if err := fn(cli); err != nil {
+				requestErrorCounter.Inc()
 				if errors.Is(err, client.ErrOpenZones) ||
 					errors.Is(err, client.ErrInvalidPassword) {
 					return backoff.Permanent(err)
@@ -186,8 +189,10 @@ func main() {
 		securityAccessories(sensors, sirens, repeaters, alarm, panicBtn)...,
 	)
 	if err != nil {
-		log.Fatal("fail to start server", "error", err)
+		log.Fatal("fail to create server", "error", err)
 	}
+	server.Addr = cfg.Address
+	server.ServeMux().Handle("/metrics", promhttp.Handler())
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -196,12 +201,12 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	go func() {
 		<-c
-		log.Info("stopping server...")
+		log.Info("stopping server")
 		signal.Stop(c)
 		cancel()
 	}()
 
-	log.Info("starting server...")
+	log.Info("starting server", "addr", server.Addr)
 	if err := server.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("failed to close server", "err", err)
 	}
@@ -231,6 +236,13 @@ func securityAccessories(
 }
 
 func boolToInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+func boolToFloat(b bool) float64 {
 	if b {
 		return 1
 	}

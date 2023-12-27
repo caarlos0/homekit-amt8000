@@ -34,6 +34,7 @@ func newSiren(info accessory.Info) *Siren {
 func (siren *Siren) Update(status client.Siren) {
 	_ = siren.LowBattery.SetValue(boolToInt(status.LowBattery))
 	_ = siren.Tamper.SetValue(boolToInt(status.Tamper))
+	tamperedGauge.WithLabelValues(siren.Name()).Set(boolToFloat(status.Tamper))
 }
 
 func setupSirens(cfg Config, status client.Status) []*Siren {
