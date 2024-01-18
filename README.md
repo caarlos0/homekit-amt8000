@@ -146,6 +146,18 @@ Setup code is `001 02 003`.
 
 ## FAQ
 
+### Is this a homebridge plugin?
+
+No.
+
+### Does it support security cams?
+
+No.
+
+### Can you help me set it up?
+
+No.
+
 ### Can you add this thing I need?
 
 No.
