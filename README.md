@@ -1,6 +1,6 @@
 # homekit-amt8000
 
-This projects creates a homekit bridge and accessories for the Intelbras AMT8000
+This projects creates a Homekit bridge and accessories for the Intelbras AMT8000
 alarm system.
 
 ###### Security System + Panic button
@@ -76,8 +76,8 @@ REPEATERS="1,2"
 CLEAN_FIRINGS_AFTER=5m
 ```
 
-> **Warning**
-> the away mode of the homekit bridge does not translate to the per-manual
+> [!WARNING]
+> the away mode of the Homekit bridge does not translate to the per-manual
 > stay mode in the Intelbras alarm system, mainly because it is supper confusing.
 > Instead, the alarm system here has 4 states:
 >
@@ -133,6 +133,10 @@ Setup code is `001 02 003`.
 ## License
 
 [The "Intelbras Documentation Sucks" License](./LICENSE.md).
+
+> [!CAUTION]
+> Be mindful of the license.
+> Go, read it.
 
 ## Previous work and thanks
 
