@@ -54,7 +54,11 @@ func main() {
 
 	var cfg Config
 	if err := env.Parse(&cfg); err != nil {
-		log.Fatal("could not parse env", "err", err)
+		log.Fatal(
+			"could not parse env",
+			"err",
+			strings.TrimPrefix(strings.ReplaceAll(err.Error(), "; ", "\n"), "env: ")+"\n",
+		)
 	}
 
 	log.Info(

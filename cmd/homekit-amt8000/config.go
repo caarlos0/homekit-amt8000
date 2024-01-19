@@ -11,15 +11,15 @@ import (
 )
 
 type Config struct {
-	Host              string        `env:"HOST,required"`
+	Host              string        `env:"HOST,notEmpty"`
 	Port              string        `env:"PORT"                envDefault:"9009"`
-	Password          string        `env:"PASSWORD,required"`
+	Password          string        `env:"PASSWORD,notEmpty"`
 	MotionZones       []int         `env:"MOTION"`
 	ContactZones      []int         `env:"CONTACT"`
 	BypassZones       []int         `env:"BYPASS"`
-	AwayPartitions    []int         `env:"AWAY,required"`
-	StayPartitions    []int         `env:"STAY,required"`
-	NightPartitions   []int         `env:"NIGHT,required"`
+	AwayPartitions    []int         `env:"AWAY,notEmpty"`
+	StayPartitions    []int         `env:"STAY,notEmpty"`
+	NightPartitions   []int         `env:"NIGHT,notEmpty"`
 	ZoneNames         []string      `env:"ZONE_NAMES"`
 	Sirens            []int         `env:"SIRENS"`
 	Repeaters         []int         `env:"REPEATERS"`
