@@ -36,6 +36,7 @@ func newRepeater(info accessory.Info) *Repeater {
 func (repeater *Repeater) Update(status client.Repeater) {
 	_ = repeater.LowBattery.SetValue(boolToInt(status.LowBattery))
 	_ = repeater.Tamper.SetValue(boolToInt(status.Tamper))
+	tamperedGauge.WithLabelValues(repeater.Name()).Set(boolToFloat(status.Tamper))
 }
 
 func setupRepeaters(cfg Config, status client.Status) []*Repeater {

@@ -47,6 +47,8 @@ func NewSecuritySystem(info accessory.Info, cfg Config, execute Executor) *Secur
 }
 
 func (a *SecuritySystem) Update(status client.Status) {
+	armStateGauge.Set(float64(a.cfg.getAlarmState(status)))
+	tamperedGauge.WithLabelValues("system").Set(boolToFloat(status.Tamper))
 	if v := a.cfg.getAlarmState(status); a.SecuritySystem.SecuritySystemCurrentState.Value() != v {
 		err := a.SecuritySystem.SecuritySystemCurrentState.SetValue(v)
 		log.Info("set current state", "state", v, "err", err)
