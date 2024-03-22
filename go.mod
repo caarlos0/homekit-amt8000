@@ -3,7 +3,7 @@ module github.com/caarlos0/homekit-amt8000
 go 1.21.1
 
 require (
-	github.com/brutella/hap v0.0.27
+	github.com/brutella/hap v0.0.31
 	github.com/caarlos0/env/v10 v10.0.0
 	github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c
 	github.com/cenkalti/backoff/v4 v4.2.1
@@ -17,7 +17,7 @@ require (
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/brutella/dnssd v1.2.7 // indirect
+	github.com/brutella/dnssd v1.2.10 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/charmbracelet/lipgloss v0.8.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -29,7 +29,7 @@ require (
 	github.com/mattn/go-isatty v0.0.18 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
-	github.com/miekg/dns v1.1.50 // indirect
+	github.com/miekg/dns v1.1.54 // indirect
 	github.com/muesli/reflow v0.3.0 // indirect
 	github.com/muesli/termenv v0.15.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -46,5 +46,6 @@ require (
 	golang.org/x/text v0.14.0 // indirect
 	golang.org/x/tools v0.14.0 // indirect
 	google.golang.org/protobuf v1.31.0 // indirect
+	gopkg.in/Regis24GmbH/go-diacritics.v2 v2.0.3 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
