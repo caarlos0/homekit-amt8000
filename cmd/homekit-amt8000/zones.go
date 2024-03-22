@@ -73,7 +73,7 @@ func (a *AlarmSensor) updateHandler(
 func (a *AlarmSensor) Update(zone client.Zone) {
 	openGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Open))
 	violatedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Violated))
-	tamperedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Tamper))
+	tamperGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Tamper))
 	bypassedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Anulated))
 
 	batlvl := boolToInt(zone.LowBattery)

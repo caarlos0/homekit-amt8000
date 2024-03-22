@@ -18,16 +18,16 @@ func TestAllZones(t *testing.T) {
 	zones := cfg.allZones()
 
 	require.Equal(t, []zoneConfig{
-		{1, "A", kindContact},
-		{2, "B", kindMotion},
-		{3, "Zone 3", kindContact},
-		{4, "C", kindMotion},
-		{5, "D", kindContact},
-		{6, "Zone 6", kindContact},
-		{7, "Zone 7", kindContact},
-		{8, "Zone 8", kindMotion},
-		{9, "Zone 9", kindMotion},
-		{10, "Zone 10", kindMotion},
+		{1, "A", kindContact, false},
+		{2, "B", kindMotion, false},
+		{3, "Zone 3", kindContact, false},
+		{4, "C", kindMotion, false},
+		{5, "D", kindContact, false},
+		{6, "Zone 6", kindContact, false},
+		{7, "Zone 7", kindContact, false},
+		{8, "Zone 8", kindMotion, false},
+		{9, "Zone 9", kindMotion, false},
+		{10, "Zone 10", kindMotion, false},
 	}, zones)
 }
 
