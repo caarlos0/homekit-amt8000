@@ -239,14 +239,7 @@ func securityAccessories(
 	return result
 }
 
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
-func boolToFloat(b bool) float64 {
+func boolAs[T int | float64](b bool) T {
 	if b {
 		return 1
 	}

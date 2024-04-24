@@ -39,12 +39,12 @@ func makePayload(cmd int, input []byte) []byte {
 	dstID := splitIntoOctets(dstID)
 	srcID := splitIntoOctets(srcID)
 	length := splitIntoOctets(len(input) + 2)
-	cmd_enc := splitIntoOctets(cmd)
+	cmdEnc := splitIntoOctets(cmd)
 	payload := []byte{}
 	payload = append(payload, dstID...)
 	payload = append(payload, srcID...)
 	payload = append(payload, length...)
-	payload = append(payload, cmd_enc...)
+	payload = append(payload, cmdEnc...)
 	payload = append(payload, input...)
 	payload = append(payload, checksum(payload))
 	return payload

@@ -48,26 +48,28 @@ func NewSecuritySystem(info accessory.Info, cfg Config, execute Executor) *Secur
 
 func (a *SecuritySystem) Update(status client.Status) {
 	armStateGauge.Set(float64(a.cfg.getAlarmState(status)))
-	tamperGauge.WithLabelValues("system").Set(boolToFloat(status.Tamper))
+	tamperGauge.WithLabelValues("system").Set(boolAs[float64](status.Tamper))
 	if v := a.cfg.getAlarmState(status); a.SecuritySystem.SecuritySystemCurrentState.Value() != v {
 		err := a.SecuritySystem.SecuritySystemCurrentState.SetValue(v)
 		log.Info("set current state", "state", v, "err", err)
 	}
 
-	if v := boolToInt(status.Tamper); a.Tampered.Value() != v {
-		_ = a.Tampered.SetValue(boolToInt(status.Tamper))
-		log.Info("alarm status", "tamper", status.Tamper)
+	if v := boolAs[int](status.Tamper); a.Tampered.Value() != v {
+		_ = a.Tampered.SetValue(boolAs[int](status.Tamper))
+		if status.Tamper {
+			log.Warn("alarm tampered")
+		}
 	}
 
 	// shows unknown, missing, short-circuit, and dead as a dead battery.
-	if v := boolToInt(status.Battery <= client.BatteryStatusDead); a.LowBattery.Value() != v {
+	if v := boolAs[int](status.Battery <= client.BatteryStatusDead); a.LowBattery.Value() != v {
 		_ = a.LowBattery.SetValue(v)
-		log.Info("alarm status", "low-battery", status.Battery.String())
+		log.Warn("alarm battery is dead or with low voltage")
 	}
 
 	if v := status.Battery.Level(); a.BatteryLevel.Value() != v {
 		_ = a.BatteryLevel.SetValue(v)
-		log.Info("alarm status", "battery-level", v)
+		log.Infof("alarm battery level is %v", v)
 	}
 }
 

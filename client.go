@@ -130,12 +130,12 @@ func (c *Client) Status() (Status, error) {
 	log.Debug("status")
 	payload := makePayload(cmdStatus, nil)
 	if _, err := c.conn.Write(payload); err != nil {
-		return Status{}, fmt.Errorf("could not gather status: %w", err)
+		return Status{}, fmt.Errorf("could not write payload: %w", err)
 	}
 
 	resp, err := c.limitTimedRead(len(payload))
 	if err != nil {
-		return Status{}, fmt.Errorf("could not gather status: %w", err)
+		return Status{}, fmt.Errorf("could not read response: %w", err)
 	}
 
 	if len(resp) == 0 {
