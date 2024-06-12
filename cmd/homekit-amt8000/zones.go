@@ -71,18 +71,18 @@ func (a *AlarmSensor) updateHandler(
 }
 
 func (a *AlarmSensor) Update(zone client.Zone) {
-	openGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Open))
-	violatedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Violated))
-	tamperGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Tamper))
-	bypassedGauge.WithLabelValues(a.Name()).Set(boolToFloat(zone.Anulated))
+	openGauge.WithLabelValues(a.Name()).Set(boolAs[float64](zone.Open))
+	violatedGauge.WithLabelValues(a.Name()).Set(boolAs[float64](zone.Violated))
+	tamperGauge.WithLabelValues(a.Name()).Set(boolAs[float64](zone.Tamper))
+	bypassedGauge.WithLabelValues(a.Name()).Set(boolAs[float64](zone.Anulated))
 
-	batlvl := boolToInt(zone.LowBattery)
+	batlvl := boolAs[int](zone.LowBattery)
 	if a.LowBattery.Value() != batlvl {
 		log.Info("low battery", "zone", zone.Number, "status", zone.LowBattery)
 		_ = a.LowBattery.SetValue(batlvl)
 	}
 
-	tamper := boolToInt(zone.Tamper)
+	tamper := boolAs[int](zone.Tamper)
 	if a.Tamper.Value() != tamper {
 		log.Info("tamper", "zone", zone.Number, "status", zone.Tamper)
 		_ = a.Tamper.SetValue(tamper)
@@ -96,7 +96,7 @@ func (a *AlarmSensor) Update(zone client.Zone) {
 
 	switch a.zone.kind {
 	case kindContact:
-		current := boolToInt(zone.IsOpen())
+		current := boolAs[int](zone.IsOpen())
 		if v := a.Contact.ContactSensorState.Value(); v == current {
 			return
 		}
