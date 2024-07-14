@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"time"
@@ -217,7 +218,7 @@ func (c *Client) init() error {
 func (c *Client) limitTimedRead(n int) ([]byte, error) {
 	buf := make([]byte, n)
 	m, err := cio.TimeoutReader(c.conn, timeout).Read(buf)
-	if err != nil {
+	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
 	}
 	if m != n {
