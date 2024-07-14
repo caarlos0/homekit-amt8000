@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AMT-8000</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css"
+      rel="stylesheet"
+      type="text/css"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/htmx.org@2.0.1"></script>
+  </head>
+  <body hx-get="/" hx-trigger="every 5s" hx-swap="outerHTML">
+    <div class="hero bg-base-200 min-h-screen">
+      <div class="hero-content text-center">
+        <div class="max-w-md">
+          <h1 class="text-5xl font-bold">AMT-8000</h1>
+          <div class="badge badge-primary badge-outline">{{.State}}</div>
+          <div class="divider"></div>
+          <h1 class="text-3xl font-bold">Zones</h1>
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Number</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{ range .Zones }}
+                <tr>
+                  <th>{{.Number}}</th>
+                  <td>{{.Name}}</td>
+                  <td>
+                    {{ if .Open }}
+                    <div class="badge badge-success badge-outline">open</div>
+                    {{ end }}
+                    <!---->
+                    {{ if .Tamper }}
+                    <div class="badge badge-error badge-outline">tamper</div>
+                    {{ end }}
+                    <!---->
+                    {{ if .LowBattery }}
+                    <div class="badge badge-warning badge-outline">
+                      low battery
+                    </div>
+                    {{ end }}
+                    <!---->
+                    {{ if .Bypassed }}
+                    <div class="badge badge-warning badge-outline">
+                      bypassed
+                    </div>
+                    {{ end }}
+                  </td>
+                </tr>
+                {{ end }}
+              </tbody>
+            </table>
+          </div>
+          <div class="divider"></div>
+          <h1 class="text-3xl font-bold">Sirens</h1>
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Number</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{ range .Sirens }}
+                <tr>
+                  <th>{{.Number}}</th>
+                  <td>{{.Name}}</td>
+                  <td>
+                    {{ if .Tamper }}
+                    <div class="badge badge-error badge-outline">tamper</div>
+                    {{ end }}
+                    <!---->
+                    {{ if .LowBattery }}
+                    <div class="badge badge-warning badge-outline">
+                      low battery
+                    </div>
+                    {{ end }}
+                  </td>
+                </tr>
+                {{ end }}
+              </tbody>
+            </table>
+          </div>
+          <div class="divider"></div>
+          <h1 class="text-3xl font-bold">Repeaters</h1>
+          <div class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Number</th>
+                  <th>Name</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {{ range .Repeaters }}
+                <tr>
+                  <th>{{.Number}}</th>
+                  <td>{{.Name}}</td>
+                  <td>
+                    {{ if .Tamper }}
+                    <div class="badge badge-error badge-outline">tamper</div>
+                    {{ end }}
+                    <!---->
+                    {{ if .LowBattery }}
+                    <div class="badge badge-warning badge-outline">
+                      low battery
+                    </div>
+                    {{ end }}
+                  </td>
+                </tr>
+                {{ end }}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

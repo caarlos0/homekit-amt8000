@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"os/signal"
@@ -20,6 +22,9 @@ import (
 	logp "github.com/charmbracelet/log"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+//go:embed index.html
+var index []byte
 
 var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	ReportTimestamp: true,
@@ -197,6 +202,66 @@ func main() {
 	}
 	server.Addr = cfg.Address
 	server.ServeMux().Handle("/metrics", promhttp.Handler())
+	server.ServeMux().Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		state := [5]string{
+			"Armed: Stay",
+			"Armed: Away",
+			"Armed: Night",
+			"Disarmed",
+			"Alarm Triggered",
+		}[alarm.SecuritySystem.SecuritySystemCurrentState.Value()]
+
+		var hSensors []PageItem
+		for i, zone := range sensors {
+			z := PageItem{
+				Number:     i + 1,
+				Name:       zone.Name(),
+				Tamper:     zone.Tamper.Value() == 1,
+				LowBattery: zone.LowBattery.Value() == 1,
+			}
+			if zone.Motion != nil {
+				z.Open = zone.Motion.MotionDetected.Value()
+			} else if zone.Contact != nil {
+				z.Open = zone.Contact.ContactSensorState.Value() == 1
+			}
+			if zone.Bypass != nil {
+				z.Bypassed = zone.Bypass.On.Value()
+			}
+			hSensors = append(hSensors, z)
+		}
+
+		var hSirens []PageItem
+		for i, siren := range sirens {
+			hSirens = append(hSirens, PageItem{
+				Number:     i + 1,
+				Name:       siren.Name(),
+				Tamper:     siren.Tamper.Value() == 1,
+				LowBattery: siren.LowBattery.Value() == 1,
+			})
+		}
+
+		var hRepeaters []PageItem
+		for i, repeater := range repeaters {
+			hRepeaters = append(hRepeaters, PageItem{
+				Number:     i + 1,
+				Name:       repeater.Name(),
+				Tamper:     repeater.Tamper.Value() == 1,
+				LowBattery: repeater.LowBattery.Value() == 1,
+			})
+		}
+
+		template.Must(template.New("index").Parse(string(index))).Execute(w, struct {
+			State     string
+			Zones     []PageItem
+			Sirens    []PageItem
+			Repeaters []PageItem
+		}{
+			State:     state,
+			Zones:     hSensors,
+			Sirens:    hSirens,
+			Repeaters: hRepeaters,
+		})
+	}))
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -244,4 +309,13 @@ func boolAs[T int | float64](b bool) T {
 		return 1
 	}
 	return 0
+}
+
+type PageItem struct {
+	Number     int
+	Name       string
+	Open       bool
+	Tamper     bool
+	Bypassed   bool
+	LowBattery bool
 }
