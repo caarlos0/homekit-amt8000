@@ -250,7 +250,8 @@ func main() {
 			})
 		}
 
-		template.Must(template.New("index").Parse(string(index))).Execute(w, struct {
+		tpl := template.Must(template.New("index").Parse(string(index)))
+		_ = tpl.Execute(w, struct {
 			State     string
 			Zones     []PageItem
 			Sirens    []PageItem

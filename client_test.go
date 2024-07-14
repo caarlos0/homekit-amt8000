@@ -43,6 +43,9 @@ func TestIsec(t *testing.T) {
 }
 
 func TestMacAddress(t *testing.T) {
+	if os.Getenv("CI") != "" {
+		t.Skip("only works in my network")
+	}
 	hw, err := MacAddress("192.168.1.1")
 	require.NoError(t, err)
 	require.NotEmpty(t, hw)
