@@ -2,10 +2,10 @@ github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiE
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
-github.com/brutella/dnssd v1.2.10 h1:Gg0k7+NtJp7TbOMS0eUVg0VEjSdftzKOTQ8QQTzQ0x4=
-github.com/brutella/dnssd v1.2.10/go.mod h1:yZ+GHHbGhtp5yJeKTnppdFGiy6OhiPoxs0WHW1KUcFA=
-github.com/brutella/hap v0.0.33 h1:461esTc8qeQEK+yVEvN2brwrTdXujiTiNWb0Ce/ZUhI=
-github.com/brutella/hap v0.0.33/go.mod h1:SZfaxv/VE3Ash7T55criv5KuLP4qpbCq7RWueEBifPs=
+github.com/brutella/dnssd v1.2.11 h1:kOAT2DY2KKEONJlB4wkmB+16FEpDWGV+HEIocuMnDD4=
+github.com/brutella/dnssd v1.2.11/go.mod h1:yZ+GHHbGhtp5yJeKTnppdFGiy6OhiPoxs0WHW1KUcFA=
+github.com/brutella/hap v0.0.34 h1:wey54SKFp7TyU+OeiV0T5qGAFpBoskzHjIDt2Y3fWWw=
+github.com/brutella/hap v0.0.34/go.mod h1:IqF/d5Iqt/QWb+JX/fC6tvi44IqW6sbwuQf3SWtdgFw=
 github.com/caarlos0/env/v11 v11.1.0 h1:a5qZqieE9ZfzdvbbdhTalRrHT5vu/4V1/ad1Ka6frhI=
 github.com/caarlos0/env/v11 v11.1.0/go.mod h1:LwgkYk1kDvfGpHthrWWLof3Ny7PezzFwS4QrsJdHTMo=
 github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c h1:R0e56WP+Tzi1SWAD77WHTUU+43G0EurVtmlSDeQbGY4=
