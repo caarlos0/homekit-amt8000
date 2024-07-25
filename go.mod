@@ -3,7 +3,7 @@ module github.com/caarlos0/homekit-amt8000
 go 1.22
 
 require (
-	github.com/brutella/hap v0.0.33
+	github.com/brutella/hap v0.0.34
 	github.com/caarlos0/env/v11 v11.1.0
 	github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c
 	github.com/cenkalti/backoff/v4 v4.3.0
@@ -17,7 +17,7 @@ require (
 require (
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/brutella/dnssd v1.2.10 // indirect
+	github.com/brutella/dnssd v1.2.11 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/charmbracelet/lipgloss v0.10.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
