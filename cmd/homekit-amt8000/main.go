@@ -177,16 +177,22 @@ func main() {
 			alarm.Update(status)
 			panicBtn.Switch.On.SetValue(status.Siren)
 
-			for i, zi := range cfg.allZones() {
-				zone := status.Zones[zi.number-1]
-				sensor := sensors[i]
-				sensor.Update(zone)
+			if len(status.Zones) >= len(cfg.allZones()) {
+				for i, zi := range cfg.allZones() {
+					zone := status.Zones[zi.number-1]
+					sensor := sensors[i]
+					sensor.Update(zone)
+				}
 			}
-			for i, number := range cfg.Sirens {
-				sirens[i].Update(status.Sirens[number-1])
+			if len(status.Sirens) >= len(cfg.Sirens) {
+				for i, number := range cfg.Sirens {
+					sirens[i].Update(status.Sirens[number-1])
+				}
 			}
-			for i, number := range cfg.Repeaters {
-				repeaters[i].Update(status.Repeaters[number-1])
+			if len(status.Repeaters) >= len(cfg.Repeaters) {
+				for i, number := range cfg.Repeaters {
+					repeaters[i].Update(status.Repeaters[number-1])
+				}
 			}
 		}
 	}()
