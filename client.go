@@ -22,7 +22,7 @@ var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	Prefix:          "isecnetv2",
 })
 
-const timeout = 5 * time.Second
+const timeout = time.Minute
 
 const AllPartitions = 0xff
 
