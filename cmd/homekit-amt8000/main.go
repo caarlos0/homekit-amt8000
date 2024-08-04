@@ -106,6 +106,7 @@ func main() {
 					errors.Is(err, client.ErrInvalidPassword) {
 					return backoff.Permanent(err)
 				}
+				return err
 			}
 			return nil
 		}, bo, func(err error, _ time.Duration) {
