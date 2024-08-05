@@ -6,8 +6,8 @@ github.com/brutella/dnssd v1.2.11 h1:kOAT2DY2KKEONJlB4wkmB+16FEpDWGV+HEIocuMnDD4
 github.com/brutella/dnssd v1.2.11/go.mod h1:yZ+GHHbGhtp5yJeKTnppdFGiy6OhiPoxs0WHW1KUcFA=
 github.com/brutella/hap v0.0.34 h1:wey54SKFp7TyU+OeiV0T5qGAFpBoskzHjIDt2Y3fWWw=
 github.com/brutella/hap v0.0.34/go.mod h1:IqF/d5Iqt/QWb+JX/fC6tvi44IqW6sbwuQf3SWtdgFw=
-github.com/caarlos0/env/v11 v11.1.0 h1:a5qZqieE9ZfzdvbbdhTalRrHT5vu/4V1/ad1Ka6frhI=
-github.com/caarlos0/env/v11 v11.1.0/go.mod h1:LwgkYk1kDvfGpHthrWWLof3Ny7PezzFwS4QrsJdHTMo=
+github.com/caarlos0/env/v11 v11.2.0 h1:kvB1ZmwdWgI3JsuuVUE7z4cY/6Ujr03D0w2WkOOH4Xs=
+github.com/caarlos0/env/v11 v11.2.0/go.mod h1:LwgkYk1kDvfGpHthrWWLof3Ny7PezzFwS4QrsJdHTMo=
 github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c h1:R0e56WP+Tzi1SWAD77WHTUU+43G0EurVtmlSDeQbGY4=
 github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c/go.mod h1:l0MiCF/ShK8f4ltZq6mZ1ynVl6QCL509vJkqqj5PyRA=
 github.com/cenkalti/backoff/v4 v4.3.0 h1:MyRJ/UdXutAwSAT+s3wNd7MfTIcy71VQueUuFK343L8=
