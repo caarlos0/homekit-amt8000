@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/brutella/hap v0.0.34
-	github.com/caarlos0/env/v11 v11.2.0
+	github.com/caarlos0/env/v11 v11.2.2
 	github.com/caarlos0/sync v0.0.2-0.20231019004254-04e1f976f35c
 	github.com/cenkalti/backoff/v4 v4.3.0
 	github.com/charmbracelet/log v0.4.0
