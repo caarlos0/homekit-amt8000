@@ -25,6 +25,13 @@ type Config struct {
 	Repeaters         []int         `env:"REPEATERS"`
 	CleanFiringsAfter time.Duration `env:"CLEAN_FIRINGS_AFTER"`
 	Address           string        `env:"LISTEN" envDefault:":9009"`
+
+	// how frequently should we ping the system to gather its status
+	StatusInterval time.Duration `env:"STATUS_INTERVAL" envDefault:"10s"`
+
+	// timeout to connect... probably a good idea to keep it lower/equal to
+	// StatusInterval
+	ClientTimeout time.Duration `env:"CLIENT_TIMEOUT" envDefault:"10s"`
 }
 
 type zoneKind uint8

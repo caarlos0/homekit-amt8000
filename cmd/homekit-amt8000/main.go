@@ -91,7 +91,7 @@ func main() {
 
 		return backoff.RetryNotify(func() error {
 			requestCounter.Inc()
-			cli, err := client.New(cfg.Host, cfg.Port, cfg.Password)
+			cli, err := client.New(cfg.Host, cfg.Port, cfg.Password, cfg.ClientTimeout)
 			if err != nil {
 				return fmt.Errorf("could not init isecnet2 client: %w", err)
 			}
@@ -164,7 +164,7 @@ func main() {
 	repeaters := setupRepeaters(cfg, status)
 
 	go func() {
-		tick := time.NewTicker(time.Second * 3)
+		tick := time.NewTicker(cfg.StatusInterval)
 		for range tick.C {
 			var status client.Status
 			if err := execute(func(cli *client.Client) (err error) {

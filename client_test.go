@@ -3,6 +3,7 @@ package amt8000
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 )
@@ -11,7 +12,7 @@ func TestIsec(t *testing.T) {
 	if os.Getenv("CI") != "" {
 		t.Skip("only works in my network")
 	}
-	cli, err := New("192.168.1.111", "9009", "307924")
+	cli, err := New("192.168.1.111", "9009", "307924", time.Second*10)
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		cli.Close()

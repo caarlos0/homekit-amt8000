@@ -22,8 +22,6 @@ var log = logp.NewWithOptions(os.Stderr, logp.Options{
 	Prefix:          "isecnetv2",
 })
 
-const timeout = time.Minute
-
 const AllPartitions = 0xff
 
 const (
@@ -65,15 +63,17 @@ func (s State) String() string {
 }
 
 type Client struct {
-	conn net.Conn
-	addr string
-	pass string
+	conn    net.Conn
+	addr    string
+	pass    string
+	timeout time.Duration
 }
 
-func New(host, port, pass string) (*Client, error) {
+func New(host, port, pass string, timeout time.Duration) (*Client, error) {
 	cli := &Client{
-		addr: net.JoinHostPort(host, port),
-		pass: pass,
+		addr:    net.JoinHostPort(host, port),
+		pass:    pass,
+		timeout: timeout,
 	}
 	return cli, cli.init()
 }
@@ -196,7 +196,7 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) init() error {
-	conn, err := net.DialTimeout("tcp", c.addr, timeout)
+	conn, err := net.DialTimeout("tcp", c.addr, c.timeout)
 	if err != nil {
 		return fmt.Errorf("could not connect: %w", err)
 	}
@@ -217,7 +217,7 @@ func (c *Client) init() error {
 
 func (c *Client) limitTimedRead(n int) ([]byte, error) {
 	buf := make([]byte, n)
-	m, err := cio.TimeoutReader(c.conn, timeout).Read(buf)
+	m, err := cio.TimeoutReader(c.conn, c.timeout).Read(buf)
 	if err != nil && !errors.Is(err, io.EOF) {
 		return nil, err
 	}
