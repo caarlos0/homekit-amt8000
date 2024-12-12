@@ -22,7 +22,7 @@ jobs:
     uses: caarlos0/meta/.github/workflows/ruleguard.yml@main
     with:
       go-version: stable
-  unit-tests:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
