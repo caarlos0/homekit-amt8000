@@ -10,7 +10,7 @@ require (
 	github.com/charmbracelet/log v0.4.2
 	github.com/j-keck/arping v1.0.3
 	github.com/prometheus/client_golang v1.23.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
 
