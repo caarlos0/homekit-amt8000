@@ -177,15 +177,14 @@ func (c *Client) Arm(partition byte) error {
 		return err
 	}
 
-	if resp[0] == 0xf0 {
+	switch resp[0] {
+	case 0xf0:
 		return ErrOpenZones
-	}
-
-	if resp[0] == 0x40 {
+	case 0x40:
 		return nil
+	default:
+		return fmt.Errorf("unknown response:\n%s", hex.Dump(resp))
 	}
-
-	return fmt.Errorf("unknown response:\n%s", hex.Dump(resp))
 }
 
 func (c *Client) Close() error {
