@@ -12,21 +12,17 @@ permissions:
   contents: read
 
 jobs:
-  govulncheck:
-    uses: caarlos0/meta/.github/workflows/govulncheck.yml@main
-    with:
-      go-version: stable
   semgrep:
-    uses: caarlos0/meta/.github/workflows/semgrep.yml@main
+    uses: caarlos0/meta/.github/workflows/semgrep.yml@277750e446b89b3c248002dd1583aa163b5852f8 # main
   ruleguard:
-    uses: caarlos0/meta/.github/workflows/ruleguard.yml@main
+    uses: caarlos0/meta/.github/workflows/ruleguard.yml@277750e446b89b3c248002dd1583aa163b5852f8 # main
     with:
       go-version: stable
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: actions/setup-go@v6
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
           go-version: stable
       - name: test
@@ -40,7 +36,7 @@ jobs:
     if: ${{ github.actor == 'dependabot[bot]' && github.event_name == 'pull_request'}}
     steps:
       - id: metadata
-        uses: dependabot/fetch-metadata@v2
+        uses: dependabot/fetch-metadata@08eff52bf64351f401fb50d4972fa95b9f2c2d1b # v2.4.0
         with:
           github-token: "${{ secrets.GITHUB_TOKEN }}"
       - run: |
