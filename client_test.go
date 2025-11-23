@@ -15,7 +15,7 @@ func TestIsec(t *testing.T) {
 	cli, err := New("192.168.1.111", "9009", "307924", time.Second*10)
 	require.NoError(t, err)
 	t.Cleanup(func() {
-		cli.Close()
+		_ = cli.Close()
 	})
 
 	status, err := cli.Status()
