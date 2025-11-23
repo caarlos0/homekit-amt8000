@@ -37,7 +37,8 @@ nfpms:
       - rpm
 
 archives:
-  - format: tar.gz
+  - formats:
+      - tar.gz
     name_template: "{{ .ProjectName }}_{{ .Arch }}"
 
 changelog:
