@@ -13,16 +13,16 @@ permissions:
 
 jobs:
   semgrep:
-    uses: caarlos0/meta/.github/workflows/semgrep.yml@277750e446b89b3c248002dd1583aa163b5852f8 # main
+    uses: caarlos0/meta/.github/workflows/semgrep.yml@main
   ruleguard:
-    uses: caarlos0/meta/.github/workflows/ruleguard.yml@277750e446b89b3c248002dd1583aa163b5852f8 # main
+    uses: caarlos0/meta/.github/workflows/ruleguard.yml@main
     with:
       go-version: stable
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
-      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+      - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
         with:
           go-version: stable
       - name: test
