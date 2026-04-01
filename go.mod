@@ -7,7 +7,7 @@ require (
 	github.com/caarlos0/env/v11 v11.4.0
 	github.com/caarlos0/sync v0.0.2
 	github.com/cenkalti/backoff/v4 v4.3.0
-	github.com/charmbracelet/log v0.4.2
+	github.com/charmbracelet/log v1.0.0
 	github.com/j-keck/arping v1.0.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
@@ -26,7 +26,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/go-chi/chi v1.5.4 // indirect
-	github.com/go-logfmt/logfmt v0.6.0 // indirect
+	github.com/go-logfmt/logfmt v0.6.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
